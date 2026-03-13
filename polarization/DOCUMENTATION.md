@@ -2,6 +2,8 @@
 
 A Python library for detecting and quantifying **polarization** and **consensus** in survey data using weighted kernel scoring and bootstrap inference.
 
+This library is written based on polarization research conducted by **Zübeyir Nişancı**, **Belkıs Yüce** and **Arif Yasin Kavdır**.
+
 ---
 
 ## Table of Contents
