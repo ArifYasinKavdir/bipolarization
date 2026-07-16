@@ -24,6 +24,12 @@ def _normalize_by_masks(A: np.ndarray, masks: dict) -> np.ndarray:
     return out
 
 
+def _normalize_globally(A: np.ndarray) -> np.ndarray:
+    """Normalise all cells of *A* by the grand total so the whole matrix sums to 1."""
+    total = A.sum()
+    return A / total if total > 0 else np.zeros_like(A, dtype=float)
+
+
 def _single_run_score(
     df: pd.DataFrame,
     x: str,
@@ -35,6 +41,7 @@ def _single_run_score(
     score_type: str,
     dropna: bool,
     kernel: str = "power",
+    formula: str = "global",
 ) -> dict:
     """
     Compute a point-estimate score for the pair (*x*, *y*).
@@ -81,19 +88,44 @@ def _single_run_score(
 
     if score_type == "polarization":
         masks = {"above": I < J, "below": I > J, "diag": I == J}
-        P = _normalize_by_masks(A, masks)
-        WP = P * W
-        return {
-            "type": "polarization",
-            x: float(WP[masks["below"]].sum()),
-            y: float(WP[masks["above"]].sum()),
-            "overall": float(WP.sum()),
-            "_n_above": float(A[masks["above"]].sum()),
-            "_n_below": float(A[masks["below"]].sum()),
-            "_sparsity": float(np.mean(A == 0)),
-            "_wp_matrix": WP,
-            "_x_labels": list(full_scale),
-        }
+        n_above = float(A[masks["above"]].sum())
+        n_below = float(A[masks["below"]].sum())
+
+        if formula == "global":
+            total = float(A.sum())
+            P = _normalize_globally(A)
+            WP = P * W
+            score_above = float(WP[masks["above"]].sum())
+            score_below = float(WP[masks["below"]].sum())
+            pct_above = n_above / total * 100 if total > 0 else 0.0
+            pct_below = n_below / total * 100 if total > 0 else 0.0
+            return {
+                "type": "polarization",
+                x: score_below,
+                y: score_above,
+                "overall": float(WP.sum()),
+                f"{x}_per_person": score_below / pct_below if pct_below > 0 else 0.0,
+                f"{y}_per_person": score_above / pct_above if pct_above > 0 else 0.0,
+                "_n_above": n_above,
+                "_n_below": n_below,
+                "_sparsity": float(np.mean(A == 0)),
+                "_wp_matrix": WP,
+                "_x_labels": list(full_scale),
+            }
+        else:  # "per_triangle"
+            P = _normalize_by_masks(A, masks)
+            WP = P * W
+            return {
+                "type": "polarization",
+                x: float(WP[masks["below"]].sum()),
+                y: float(WP[masks["above"]].sum()),
+                "overall": float(WP.sum()),
+                "_n_above": n_above,
+                "_n_below": n_below,
+                "_sparsity": float(np.mean(A == 0)),
+                "_wp_matrix": WP,
+                "_x_labels": list(full_scale),
+            }
 
     elif score_type == "consensus":
         s = I + J
@@ -134,6 +166,7 @@ def _bootstrap(
     ci: float,
     rng: np.random.Generator,
     kernel: str = "power",
+    formula: str = "global",
 ) -> tuple[dict, dict]:
     """
     Run a non-parametric bootstrap around the point estimate.
@@ -145,7 +178,7 @@ def _bootstrap(
     summary : dict
         Per-key dict with keys ``mean``, ``se``, ``ci``, ``dist``.
     """
-    point = _single_run_score(df, x, y, start_value, end_value, p, q, score_type, dropna, kernel)
+    point = _single_run_score(df, x, y, start_value, end_value, p, q, score_type, dropna, kernel, formula)
     public_keys = [k for k in point if k != "type" and not k.startswith("_")]
 
     n = len(df)
@@ -154,7 +187,7 @@ def _bootstrap(
 
     for b in range(B):
         sample_idx = rng.choice(idx, size=n, replace=True)
-        s = _single_run_score(df.iloc[sample_idx], x, y, start_value, end_value, p, q, score_type, dropna, kernel)
+        s = _single_run_score(df.iloc[sample_idx], x, y, start_value, end_value, p, q, score_type, dropna, kernel, formula)
         for k in public_keys:
             dist[k][b] = s[k]
 
@@ -188,6 +221,7 @@ def calculate_scores(
     q: float = 1.0,
     score_type: str = "polarization",
     kernel: str = "power",
+    formula: str = "global",
     dropna: bool = False,
     B: int = 2000,
     ci: float = 0.95,
@@ -224,6 +258,18 @@ def calculate_scores(
         Which scoring geometry to apply.
     kernel : {'power', 'gaussian'}, default 'power'
         Kernel function used for the distance term.
+    formula : {'global', 'per_triangle'}, default 'global'
+        Normalisation strategy for the count matrix.
+
+        ``'global'`` — all cells are divided by the grand total so the whole
+        matrix sums to 1.  Each triangle's raw score therefore reflects its
+        share of the entire sample.  Two additional per-person keys are
+        returned for polarization: ``{first_variable}_per_person`` and
+        ``{second_variable}_per_person``, computed as
+        ``score / (n_triangle / n_total * 100)``.
+
+        ``'per_triangle'`` — legacy behaviour: upper and lower triangles are
+        each normalised independently to sum to 1.
     dropna : bool, default False
         Whether to drop NaN values before scoring (currently informational;
         both columns are always dropna'd via alignment).
@@ -243,15 +289,20 @@ def calculate_scores(
         ``'type'`` : str
             Echo of *score_type*.
         ``'point'`` : dict
-            Point estimates.  For ``'polarization'``: keys are
-            *first_variable*, *second_variable*, and ``'overall'``.
-            For ``'consensus'``: ``'negatives'``, ``'positives'``, ``'overall'``.
-            Diagnostic keys (prefixed ``_``) are also present.
+            Point estimates.  For ``'polarization'`` with ``formula='global'``:
+            keys are *first_variable*, *second_variable*, ``'overall'``,
+            ``'{first_variable}_per_person'``, ``'{second_variable}_per_person'``.
+            With ``formula='per_triangle'``: *first_variable*, *second_variable*,
+            ``'overall'``.  For ``'consensus'``: ``'negatives'``, ``'positives'``,
+            ``'overall'``.  Diagnostic keys (prefixed ``_``) are also present.
         ``'bootstrap'`` : dict
             Per-key bootstrap summary with ``'mean'``, ``'se'``, ``'ci'``
-            (and ``'dist'`` if *keep_dists* is True).
+            (and ``'dist'`` if *keep_dists* is True).  Every public key —
+            including the per-person keys — is recomputed from scratch within
+            each bootstrap resample, so the per-person summaries describe the
+            resampling distribution of the per-person scores themselves.
         ``'meta'`` : dict
-            ``'B'``, ``'ci'``, ``'kernel'``.
+            ``'B'``, ``'ci'``, ``'kernel'``, ``'formula'``.
 
     Examples
     --------
@@ -259,6 +310,8 @@ def calculate_scores(
     ...                           score_type="polarization", B=2000)
     >>> result["point"]["overall"]
     0.6215
+    >>> result["point"]["idemus_per_person"]
+    0.0312
     >>> result["bootstrap"]["overall"]["ci"]
     [0.5665, 0.6848]
     """
@@ -266,7 +319,7 @@ def calculate_scores(
     point, boot = _bootstrap(
         df, first_variable, second_variable,
         start_value, end_value, p, q,
-        score_type, dropna, B, ci, rng, kernel=kernel,
+        score_type, dropna, B, ci, rng, kernel=kernel, formula=formula,
     )
     if not keep_dists:
         for k in boot:
@@ -275,5 +328,5 @@ def calculate_scores(
         "type":      point["type"],
         "point":     point,
         "bootstrap": boot,
-        "meta":      {"B": B, "ci": ci, "kernel": kernel},
+        "meta":      {"B": B, "ci": ci, "kernel": kernel, "formula": formula},
     }

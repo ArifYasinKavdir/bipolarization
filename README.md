@@ -47,7 +47,7 @@ from polarization import dashboard_pair
 dashboard_pair(df, "idemus", "idekemalist", score_type="polarization", B_boot=2000)
 ```
 
-This produces a three-panel figure: point estimates with CI error bars, bootstrap distributions, and a heatmap of the weighted probability matrix.
+This produces a three-panel figure: per-person point estimates with CI error bars, per-person bootstrap distributions, and a heatmap of the weighted probability matrix. The per-person scores are recomputed inside every bootstrap resample; aggregate scores are returned in the result but not plotted.
 
 ---
 

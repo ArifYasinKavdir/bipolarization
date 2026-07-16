@@ -235,6 +235,8 @@ Runs `calculate_scores` and displays a three-panel matplotlib figure:
 | **B** (top-right) | Overlaid histograms of the bootstrap distributions for each score key |
 | **C** (bottom, full-width) | Heatmap of the `W × P` matrix; diagonal or anti-diagonal separator; column contribution labels |
 
+For `score_type="polarization"` panels A and B visualize **only the per-person scores** (`<x>_per_person`, `<y>_per_person`). These are recomputed inside every bootstrap resample, so the histograms show the bootstrap distribution of the per-person scores themselves. The aggregate triangle scores and `overall` are still present in the returned result but are not plotted.
+
 Also prints a text summary of the bootstrap results and sparsity diagnostic to stdout.
 
 **Arguments** are identical to `calculate_scores`, with `B_boot` in place of `B`.
@@ -418,10 +420,12 @@ weight_matrix_visualization(p=0.3, q=1.0, type="polarization", kernel="gaussian"
 ```python
 from polarization import dashboard_pair
 
+# Visualizes the per-person scores, recomputed at every bootstrap resample
 dash = dashboard_pair(df, "idemus", "idekemalist", score_type="polarization", B_boot=2000)
 
-# Access the underlying scores programmatically
+# Aggregate scores are still available programmatically
 overall = dash["scores"]["point"]["overall"]
+per_person = dash["scores"]["point"]["idemus_per_person"]
 ```
 
 ### Accessing the raw WP matrix

@@ -96,6 +96,13 @@ def dashboard_pair(
     B — Bootstrap distributions (overlaid histograms).
     C — Per-cell WP heatmap with the main or anti-diagonal separator.
 
+    For ``score_type='polarization'`` only the per-person scores
+    (``<x>_per_person``, ``<y>_per_person``) are visualized.  They are
+    recomputed inside every bootstrap resample, so panels A and B show the
+    bootstrap distribution of the per-person scores themselves.  The
+    aggregate triangle scores and ``'overall'`` are still returned in the
+    result dict but are not plotted.
+
     Parameters
     ----------
     df : pd.DataFrame
@@ -129,7 +136,10 @@ def dashboard_pair(
     boot  = res["bootstrap"]
 
     if score_type == "polarization":
-        keys = [k for k in boot if k != "overall"]
+        # Visualize per-person scores only; aggregate scores stay in `res`.
+        keys = [k for k in boot if k.endswith("_per_person")]
+        if not keys:  # e.g. formula='per_triangle' produces no per-person keys
+            keys = [k for k in boot if k != "overall"]
     else:
         keys = list(boot.keys())
 
@@ -189,9 +199,12 @@ def dashboard_pair(
     ax_b.set_xlabel("Score", fontsize=9)
     ax_b.axvline(0, color="black", linewidth=0.8, linestyle="--")
     ax_b.set_title(f"Bootstrap Results\n(B={B_boot}, {int(ci * 100)}% CI)", fontsize=10)
+    span = float(max(ci_hi.max(), point_vals.max(), 0.0)
+                 - min(ci_lo.min(), point_vals.min(), 0.0)) or 1.0
     for i, (k, v) in enumerate(zip(keys, point_vals)):
-        offset = 0.005 if v >= 0 else -0.005
-        ax_b.text(v + offset, i, f"{v:.3f}", va="center",
+        offset = 0.02 * span if v >= 0 else -0.02 * span
+        base = ci_hi[i] if v >= 0 else ci_lo[i]
+        ax_b.text(base + offset, i, f"{v:.4f}", va="center",
                   ha="left" if v >= 0 else "right", fontsize=8)
 
     # ── Panel B: Bootstrap distributions ─────────────────────────────────
@@ -199,7 +212,7 @@ def dashboard_pair(
     for i, k in enumerate(keys):
         color = palette[i % len(palette)]
         ax_pk.hist(boot[k]["dist"], bins=35, alpha=0.55, color=color,
-                   edgecolor="white", label=f"{k} ({point[k]:.3f})")
+                   edgecolor="white", label=f"{k} ({point[k]:.4f})")
         ax_pk.axvline(point[k], color=color, linestyle="--", linewidth=1.5)
     ax_pk.set_xlabel("Score (bootstrap)", fontsize=9)
     ax_pk.set_ylabel("Count", fontsize=9)
