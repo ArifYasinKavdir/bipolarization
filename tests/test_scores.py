@@ -140,6 +140,19 @@ def test_duplicate_index_labels_score_like_a_fresh_index(make_frame):
         np.testing.assert_array_equal(summary["dist"], expected["bootstrap"][key]["dist"])
 
 
+@pytest.mark.parametrize("score_type", ["polarization", "consensus"])
+def test_scale_offset_does_not_change_scores(score_type):
+    df = _toy_frame_missing_y()
+    kwargs = dict(score_type=score_type, B=50, keep_dists=True)
+    expected = calculate_scores(df, "X", "Y", start_value=0, end_value=4, **kwargs)
+    # The same answers recorded on a 1..5 scale.
+    result = calculate_scores(df + 1, "X", "Y", start_value=1, end_value=5, **kwargs)
+
+    for key, summary in result["bootstrap"].items():
+        assert result["point"][key] == expected["point"][key]
+        np.testing.assert_array_equal(summary["dist"], expected["bootstrap"][key]["dist"])
+
+
 def test_consensus_scores_are_finite_for_fractional_p():
     point = calculate_scores(
         _toy_frame(), "X", "Y",

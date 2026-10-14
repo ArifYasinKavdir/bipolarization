@@ -55,9 +55,10 @@ def weight_matrix_generator(
         If *type* or *kernel* is not recognised.
     """
     N = end_value - start_value
-    i = np.arange(start_value, end_value + 1)
-    j = np.arange(start_value, end_value + 1)
-    I, J = np.meshgrid(i, j)
+    # Positions 0..N on the scale, not the raw values: the geometry must not
+    # depend on where the scale starts (a 1..7 scale weighs like 0..6).
+    i = np.arange(N + 1)
+    I, J = np.meshgrid(i, i)
 
     if type == "polarization":
         d = np.abs(I - J) / N
