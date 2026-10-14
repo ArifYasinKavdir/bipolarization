@@ -1,0 +1,2700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Bipolarization, Step by Step</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="An animated, bilingual (EN/TR) guide to the bipolarization method: joint tables, weight matrices, kernels, per-person scores and bootstrap inference, with live simulations.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..600;1,8..60,400&display=swap">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [["\\(", "\\)"]], displayMath: [["\\[", "\\]"]] },
+  svg: { fontCache: "local" },
+  options: { enableMenu: false },
+  startup: {
+    ready() {
+      MathJax.startup.defaultReady();
+      MathJax.startup.promise.then(function () { window.__mjReady = true; if (window.flushTex) window.flushTex(); });
+    }
+  }
+};
+</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<style>
+/* Layout: a lab notebook of chapters. Narration steps on the left, a sticky
+   "stage" on the right holding the live tables; graph-paper ground. */
+:root {
+  --paper: #f2f4f7;
+  --sheet: #fbfcfd;
+  --ink: #131a2a;
+  --ink-2: #435067;
+  --muted: #5f6a7f;
+  --rule: #d6dce6;
+  --grid: #e5e9f0;
+  --pen: #2340a0;
+  --pen-wash: #e2e7f6;
+  --on-pen: #ffffff;
+  --camp-x: #1baf7a;
+  --camp-y: #6250d6;
+  --diag: #98a1b0;
+  --neg-3: #174a8c;
+  --neg-2: #2a78d6;
+  --neg-1: #a9c8ef;
+  --mid: #eef0f4;
+  --pos-1: #f2b1a6;
+  --pos-2: #e34948;
+  --pos-3: #a3242a;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "Source Serif 4", "Source Serif Pro", Georgia, serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --bar-h: 52px;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0c111b; --sheet: #141b28; --ink: #e6eaf2; --ink-2: #b2bacb; --muted: #8b94a8;
+    --rule: #2a3347; --grid: #1c2434; --pen: #9fb2ff; --pen-wash: #1d2747; --on-pen: #0c111b;
+    --camp-x: #199e70; --camp-y: #9085e9; --diag: #6d7689;
+    --neg-3: #a8ccff; --neg-2: #3d84de; --neg-1: #20395f; --mid: #1f2634;
+    --pos-1: #5c2a31; --pos-2: #d14f4f; --pos-3: #ffa093;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0c111b; --sheet: #141b28; --ink: #e6eaf2; --ink-2: #b2bacb; --muted: #8b94a8;
+  --rule: #2a3347; --grid: #1c2434; --pen: #9fb2ff; --pen-wash: #1d2747; --on-pen: #0c111b;
+  --camp-x: #199e70; --camp-y: #9085e9; --diag: #6d7689;
+  --neg-3: #a8ccff; --neg-2: #3d84de; --neg-1: #20395f; --mid: #1f2634;
+  --pos-1: #5c2a31; --pos-2: #d14f4f; --pos-3: #ffa093;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: calc(var(--bar-h) + 12px); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+}
+#app[data-lang="en"] [lang="tr"], #app[data-lang="tr"] [lang="en"] { display: none !important; }
+
+h1, h2, h3, .display { font-family: var(--display); font-stretch: 82%; line-height: 1.08; text-wrap: balance; margin: 0; }
+p { margin: 0; }
+a { color: var(--pen); }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; border-radius: 3px; }
+.mono, code, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.eyebrow {
+  font-family: var(--display); font-size: 12px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted);
+}
+.wrap {
+  max-width: 1200px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---------- top bar ---------- */
+#bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+}
+#bar .wrap { display: flex; align-items: center; gap: 16px; height: var(--bar-h); }
+.brand { font-family: var(--display); font-weight: 800; font-stretch: 78%; font-size: 19px; letter-spacing: .01em; white-space: nowrap; text-decoration: none; color: var(--ink); }
+.brand b { color: var(--pen); font-weight: 800; }
+#toc { flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+#toc::-webkit-scrollbar { display: none; }
+#toc ol { list-style: none; display: flex; gap: 2px; margin: 0; padding: 0; }
+#toc a {
+  display: block; padding: 5px 8px; border-radius: 4px; text-decoration: none; white-space: nowrap;
+  font-family: var(--display); font-size: 13px; font-weight: 500; color: var(--ink-2);
+}
+#toc a .n { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-right: 4px; }
+#toc a:hover { background: var(--pen-wash); color: var(--ink); }
+#toc a.on { background: var(--pen-wash); color: var(--pen); }
+#toc a.on .n { color: var(--pen); }
+.lang { display: flex; border: 1px solid var(--rule); border-radius: 5px; overflow: hidden; flex: none; }
+.lang button {
+  border: 0; background: transparent; padding: 4px 10px; cursor: pointer;
+  font-family: var(--display); font-size: 13px; font-weight: 600; color: var(--muted);
+}
+.lang button[aria-pressed="true"] { background: var(--pen); color: var(--on-pen); }
+
+/* ---------- hero ---------- */
+#hero {
+  border-bottom: 1px solid var(--rule);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: -1px -1px;
+}
+#hero .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: center; padding-block: 56px 48px; }
+#hero h1 { font-size: clamp(44px, 7vw, 84px); font-weight: 800; font-stretch: 75%; letter-spacing: -.01em; margin-top: 10px; }
+#hero h1 .x { color: var(--camp-x); }
+#hero h1 .y { color: var(--camp-y); }
+#hero .lede { font-size: 20px; line-height: 1.5; margin-top: 20px; max-width: 34em; color: var(--ink-2); }
+.hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+.hero-fig { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius); padding: 14px; }
+#heroCanvas { width: 100%; aspect-ratio: 1 / 1; display: block; max-width: 100%; }
+.hero-fig figcaption { font-size: 14px; line-height: 1.45; color: var(--ink-2); margin-top: 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-family: var(--display); font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+.sw.x { background: var(--camp-x); } .sw.y { background: var(--camp-y); } .sw.d { background: var(--diag); }
+.sw.neg { background: var(--neg-2); } .sw.pos { background: var(--pos-2); }
+
+/* ---------- buttons & controls ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer; text-decoration: none;
+  font-family: var(--display); font-size: 14px; font-weight: 600; letter-spacing: .01em;
+  padding: 7px 14px; border-radius: 5px; border: 1px solid var(--rule); background: var(--sheet); color: var(--ink);
+}
+.btn:hover { border-color: var(--pen); color: var(--pen); }
+.btn.primary { background: var(--pen); border-color: var(--pen); color: var(--on-pen); }
+.btn.primary:hover { filter: brightness(1.1); color: var(--on-pen); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn svg { width: 14px; height: 14px; fill: currentColor; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 5px; overflow: hidden; flex-wrap: wrap; }
+.seg button {
+  border: 0; border-right: 1px solid var(--rule); background: var(--sheet); padding: 5px 11px; cursor: pointer;
+  font-family: var(--display); font-size: 13px; font-weight: 600; color: var(--ink-2);
+}
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--pen-wash); color: var(--pen); }
+.ctl { display: grid; gap: 4px; min-width: 0; }
+.ctl label, .ctl .lbl { font-family: var(--display); font-size: 13px; font-weight: 600; color: var(--ink-2); display: flex; justify-content: space-between; gap: 8px; }
+.ctl output { font-family: var(--mono); font-weight: 500; color: var(--ink); }
+input[type="range"] { width: 100%; accent-color: var(--pen); }
+.ctl-row { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: end; }
+.ctl-row > .ctl { flex: 1 1 140px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font-family: var(--display); font-size: 12.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px;
+  border: 1px solid var(--rule); background: var(--sheet); color: var(--ink-2); cursor: pointer;
+}
+.chip[aria-pressed="true"] { border-color: var(--pen); color: var(--pen); background: var(--pen-wash); }
+.scale-ends { display: flex; justify-content: space-between; font-family: var(--display); font-size: 12px; color: var(--muted); }
+
+/* ---------- chapters ---------- */
+.chapter { padding-block: 72px 24px; }
+.chapter + .chapter { border-top: 1px solid var(--rule); }
+.ch-head { max-width: 46em; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 28px; }
+.ch-head h2 { font-size: clamp(30px, 4.2vw, 46px); font-weight: 750; }
+.ch-head .lede { font-size: 18.5px; color: var(--ink-2); max-width: 40em; }
+.ch-body { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 36px; align-items: start; }
+.ch-body.wide { grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); }
+
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; counter-reset: st; min-width: 0; }
+.step {
+  position: relative; padding: 14px 16px 16px 50px; border-radius: var(--radius);
+  border: 1px solid transparent; cursor: pointer; transition: background .2s, border-color .2s; min-width: 0;
+}
+.step::before {
+  counter-increment: st; content: counter(st);
+  position: absolute; left: 14px; top: 14px; width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center; font-family: var(--mono); font-size: 12px; font-weight: 500;
+  border: 1.5px solid var(--rule); color: var(--muted); background: var(--sheet);
+}
+.step:hover { background: color-mix(in srgb, var(--sheet) 70%, transparent); }
+.step.on { background: var(--sheet); border-color: var(--rule); box-shadow: 0 1px 0 var(--rule); }
+.step.on::before { background: var(--pen); border-color: var(--pen); color: var(--on-pen); }
+.step h3 { font-size: 19px; font-weight: 700; margin-bottom: 6px; }
+.step h3 button { all: unset; cursor: pointer; }
+.step h3 button:focus-visible { outline: 2px solid var(--pen); outline-offset: 3px; border-radius: 2px; }
+.step p + p, .step p + .math, .step .math + p, .step .math + .math { margin-top: 10px; }
+.step .eq { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-left: 6px; font-weight: 400; letter-spacing: 0; }
+.math { overflow-x: auto; overflow-y: hidden; padding: 4px 0; font-size: 16px; max-width: 100%; }
+.math mjx-container[display="true"] { margin: .3em 0 !important; }
+.note { font-size: 14.5px; color: var(--ink-2); border-left: 2px solid var(--rule); padding-left: 12px; }
+.step .note { margin-top: 10px; }
+mjx-container { color: inherit; }
+.tex-fallback { font-family: var(--mono); font-size: 13px; color: var(--ink-2); white-space: pre-wrap; }
+
+/* stage */
+.stage {
+  position: sticky; top: calc(var(--bar-h) + 16px + env(safe-area-inset-top, 0px));
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius);
+  display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0;
+}
+.stage-main { padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
+#probFig { max-width: 470px; width: 100%; justify-self: center; }
+#sBars, #cBars { max-width: 470px; }
+.stage-foot {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--rule);
+}
+.stage-foot .where { flex: 1; min-width: 0; font-family: var(--display); font-size: 13.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stage-foot .where b { font-family: var(--mono); font-weight: 500; color: var(--ink); margin-right: 6px; }
+.icon-btn {
+  width: 34px; height: 34px; display: grid; place-items: center; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--rule); background: var(--sheet); color: var(--ink); flex: none;
+}
+.icon-btn:hover { border-color: var(--pen); color: var(--pen); }
+.icon-btn:disabled { opacity: .4; cursor: default; }
+.icon-btn svg { width: 14px; height: 14px; fill: currentColor; }
+.play-btn { width: auto; padding: 0 12px; gap: 6px; display: inline-flex; align-items: center; font-family: var(--display); font-size: 13px; font-weight: 600; }
+
+.fig-title { font-family: var(--display); font-size: 13px; font-weight: 600; color: var(--ink-2); letter-spacing: .01em; }
+.caption { font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
+.readouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+.ro { border: 1px solid var(--rule); border-radius: 5px; padding: 7px 10px; min-width: 0; }
+.ro .k { font-family: var(--display); font-size: 12px; font-weight: 600; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.ro .v { font-family: var(--mono); font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.ro .s { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.ro.hl { border-color: var(--pen); }
+
+/* svg matrices & charts */
+svg.mx, svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+svg text { font-family: var(--mono); fill: var(--ink); }
+svg .tick { font-size: 10px; fill: var(--muted); }
+svg .axt { font-family: var(--display); font-size: 11px; font-weight: 600; fill: var(--ink-2); }
+svg .cell rect { transition: fill .45s ease, opacity .3s; stroke: none; }
+svg .cell text { transition: fill .45s ease, opacity .3s; pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+svg .cell.dim rect, svg .cell.dim text { opacity: .22; }
+svg .cell.ping rect { stroke: var(--ink); stroke-width: 2; }
+svg .gridline { stroke: var(--grid); stroke-width: 1; }
+svg .axis { stroke: var(--rule); stroke-width: 1; }
+svg .guide { stroke: var(--ink-2); stroke-width: 1.2; stroke-dasharray: 4 3; fill: none; opacity: .75; pointer-events: none; }
+svg .region { fill: none; stroke-width: 2.5; pointer-events: none; stroke-linejoin: round; transition: opacity .3s; }
+svg .rlabel { font-family: var(--display); font-size: 12px; font-weight: 700; pointer-events: none; paint-order: stroke; stroke: var(--sheet); stroke-width: 4px; }
+svg.live .cell rect, svg.live .cell text { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  svg .cell rect, svg .cell text, svg .region { transition: none; }
+}
+
+.trio { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 6px; }
+.trio .op { font-family: var(--mono); font-size: 22px; color: var(--muted); }
+.trio .cap { text-align: center; font-family: var(--display); font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin-bottom: 2px; }
+.trio-scroll { overflow-x: auto; }
+.trio-hint { display: none; font-family: var(--display); font-size: 12px; color: var(--muted); margin-top: -6px; }
+.sumline {
+  font-family: var(--mono); font-size: 13px; line-height: 1.55; border: 1px dashed var(--rule); border-radius: 5px;
+  padding: 8px 10px; color: var(--ink-2); min-height: 3.2em; overflow-x: auto; white-space: nowrap;
+}
+.sumline b { color: var(--ink); font-weight: 500; }
+.sumline .tx { color: var(--camp-x); } .sumline .ty { color: var(--camp-y); }
+
+.inspector { border: 1px solid var(--rule); border-radius: 5px; padding: 8px 12px; min-height: 64px; display: grid; gap: 2px; overflow-x: auto; }
+.inspector .hd { font-family: var(--display); font-size: 12px; font-weight: 600; color: var(--muted); }
+
+.tokens { display: flex; flex-wrap: wrap; gap: 4px; }
+.tok {
+  font-family: var(--mono); font-size: 11px; padding: 2px 5px; border-radius: 3px; border: 1px solid var(--rule);
+  background: var(--sheet); color: var(--ink-2); display: inline-flex; gap: 4px; align-items: center;
+  transition: background .3s, border-color .3s, opacity .3s;
+}
+.tok i { font-style: normal; color: var(--muted); }
+.tok.x { border-color: var(--camp-x); } .tok.y { border-color: var(--camp-y); } .tok.d { border-color: var(--diag); }
+.tok.gone { opacity: .25; }
+.tok .cnt { font-weight: 600; color: var(--ink); }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.tabs button {
+  border: 1px solid var(--rule); background: var(--sheet); border-radius: 5px; padding: 6px 12px; cursor: pointer;
+  font-family: var(--display); font-size: 14px; font-weight: 600; color: var(--ink-2);
+}
+.tabs button[aria-selected="true"] { border-color: var(--pen); color: var(--pen); background: var(--pen-wash); }
+.panel { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 28px; align-items: start; }
+.panel .fig { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius); padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+.panel .txt { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+.panel .txt h3 { font-size: 22px; font-weight: 700; }
+.tbl-wrap { overflow-x: auto; }
+table.data { border-collapse: collapse; font-size: 13px; width: 100%; }
+table.data th, table.data td { padding: 5px 8px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+table.data th { font-family: var(--display); font-weight: 600; color: var(--muted); font-size: 12px; }
+table.data td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+table.data th:first-child, table.data td:first-child { text-align: left; }
+table.data td.lbl { font-family: var(--display); font-weight: 600; }
+
+/* recipe */
+.recipe-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+.recipe { list-style: none; margin: 0; padding: 0; counter-reset: rc; border-top: 1px solid var(--rule); }
+.recipe li { display: grid; grid-template-columns: 34px minmax(0, 1fr); column-gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--rule); min-width: 0; }
+.recipe li::before { counter-increment: rc; content: counter(rc); grid-row: span 2; font-family: var(--mono); font-size: 13px; color: var(--pen); font-weight: 500; padding-top: 2px; }
+.recipe h3 { font-size: 17px; font-weight: 700; margin: 0 0 4px; }
+.recipe-code { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; position: sticky; top: calc(var(--bar-h) + 16px); }
+pre.code {
+  font-family: var(--mono); font-size: 13px; line-height: 1.55; background: var(--sheet); border: 1px solid var(--rule);
+  border-radius: var(--radius); padding: 14px 16px; overflow-x: auto; margin: 0;
+}
+pre.code .c { color: var(--muted); }
+pre.code .s { color: var(--camp-y); }
+footer { border-top: 1px solid var(--rule); margin-top: 48px; }
+footer .wrap { padding-block: 28px 48px; display: grid; gap: 10px; font-size: 14px; color: var(--ink-2); max-width: 1200px; }
+
+#tip {
+  position: fixed; z-index: 50; pointer-events: none; background: var(--sheet); color: var(--ink);
+  border: 1px solid var(--rule); border-radius: 5px; padding: 6px 9px; font-family: var(--mono); font-size: 12px; line-height: 1.45;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12); max-width: 260px; opacity: 0; transition: opacity .12s;
+}
+#tip.on { opacity: 1; }
+#tip b { font-family: var(--display); font-weight: 700; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 980px) {
+  #hero .wrap { grid-template-columns: minmax(0, 1fr); gap: 28px; padding-block: 36px 32px; }
+  .hero-fig { max-width: 560px; }
+  .ch-body, .ch-body.wide { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .ch-body .stage { order: -1; position: relative; top: 0; }
+  .panel { grid-template-columns: minmax(0, 1fr); }
+  .recipe-wrap { grid-template-columns: minmax(0, 1fr); }
+  .recipe-code { position: static; }
+  .chapter { padding-block: 52px 16px; }
+}
+@media (max-width: 560px) {
+  body { font-size: 16px; }
+  .brand span { display: none; }
+  #hero .lede { font-size: 18px; }
+  .step { padding: 12px 12px 14px 44px; }
+  .step::before { left: 10px; top: 12px; }
+  .stage-main { padding: 12px; }
+  .trio { grid-template-columns: repeat(5, auto); min-width: 520px; }
+  .trio-hint { display: block; }
+  .play-btn .t { display: none; }
+}
+</style>
+</head>
+<body>
+<div id="app" data-lang="en">
+<header id="bar">
+  <div class="wrap">
+    <a class="brand" href="#hero">bi<b>polar</b>ization<span lang="en"> · step by step</span><span lang="tr"> · adım adım</span></a>
+    <nav id="toc" aria-label="Chapters">
+      <ol>
+        <li><a href="#ch-problem"><span class="n">1</span><span lang="en">Problem</span><span lang="tr">Sorun</span></a></li>
+        <li><a href="#ch-table"><span class="n">2</span><span lang="en">Joint table</span><span lang="tr">Ortak tablo</span></a></li>
+        <li><a href="#ch-weights"><span class="n">3</span><span lang="en">Weights</span><span lang="tr">Ağırlıklar</span></a></li>
+        <li><a href="#ch-kernels"><span class="n">4</span><span lang="en">Kernels</span><span lang="tr">Çekirdekler</span></a></li>
+        <li><a href="#ch-prob"><span class="n">5</span><span lang="en">Probabilities</span><span lang="tr">Olasılıklar</span></a></li>
+        <li><a href="#ch-scores"><span class="n">6</span><span lang="en">Scores</span><span lang="tr">Skorlar</span></a></li>
+        <li><a href="#ch-size"><span class="n">7</span><span lang="en">Per person</span><span lang="tr">Kişi başı</span></a></li>
+        <li><a href="#ch-consensus"><span class="n">8</span><span lang="en">Consensus</span><span lang="tr">Uzlaşı</span></a></li>
+        <li><a href="#ch-boot"><span class="n">9</span>Bootstrap</a></li>
+        <li><a href="#ch-results"><span class="n">10</span><span lang="en">Results</span><span lang="tr">Bulgular</span></a></li>
+        <li><a href="#ch-recipe"><span class="n">11</span><span lang="en">Recipe</span><span lang="tr">Özet</span></a></li>
+      </ol>
+    </nav>
+    <div class="lang" role="group" aria-label="Language / Dil">
+      <button type="button" id="lang-en" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" id="lang-tr" data-lang="tr" aria-pressed="false">TR</button>
+    </div>
+  </div>
+</header>
+
+<main>
+<!-- =============================== HERO =============================== -->
+<section id="hero">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow"><span lang="en">An animated guide to the bipolarization method</span><span lang="tr">Bipolarization yöntemine animasyonlu bir rehber</span></div>
+      <h1><span lang="en">Two camps,<br>one table</span><span lang="tr">İki kamp,<br>tek tablo</span></h1>
+      <p class="lede" lang="en">Most polarization indices read one distribution at a time. This method reads the joint table of two survey items and asks where in that table the disagreement sits. Step through the equations below. Every number on this page is recomputed in your browser.</p>
+      <p class="lede" lang="tr">Kutuplaşma endekslerinin çoğu dağılımları tek tek okur. Bu yöntem iki anket maddesinin ortak tablosunu okur ve anlaşmazlığın bu tablonun neresinde durduğunu sorar. Aşağıdaki denklemleri adım adım izleyin. Bu sayfadaki her sayı tarayıcınızda yeniden hesaplanır.</p>
+      <div class="hero-cta">
+        <a class="btn primary" href="#ch-problem"><span lang="en">Start with the problem</span><span lang="tr">Sorunla başlayın</span> ↓</a>
+        <a class="btn" href="#ch-recipe"><span lang="en">Skip to the recipe</span><span lang="tr">Özete atlayın</span></a>
+      </div>
+    </div>
+    <figure class="hero-fig" style="margin:0">
+      <canvas id="heroCanvas" role="img" aria-label="Animated dot plot: 2,218 simulated respondents fall into an 11 by 11 table of AKP and CHP ratings; two opposite corners fill up."></canvas>
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-top:10px">
+        <div class="legend">
+          <span><i class="sw x"></i><span lang="en">rates AKP higher</span><span lang="tr">AKP'ye daha yakın</span></span>
+          <span><i class="sw y"></i><span lang="en">rates CHP higher</span><span lang="tr">CHP'ye daha yakın</span></span>
+          <span><i class="sw d"></i><span lang="en">rates both the same</span><span lang="tr">ikisine eşit</span></span>
+        </div>
+        <button type="button" class="btn" id="heroReplay"><svg viewBox="0 0 16 16"><path d="M8 2a6 6 0 1 0 6 6h-2a4 4 0 1 1-1.2-2.8L8.5 7.5H14V2l-1.8 1.8A6 6 0 0 0 8 2z"/></svg><span lang="en">Replay</span><span lang="tr">Tekrar</span></button>
+      </div>
+      <figcaption>
+        <span lang="en">Each dot is one respondent in a <b>simulated</b> AKP × CHP sample (n = 2,218), dropped into the cell of their two 0–10 ratings. The two filled corners are the opposed camps the method is built to detect.</span>
+        <span lang="tr">Her nokta, <b>simüle edilmiş</b> bir AKP × CHP örnekleminde (n = 2.218) bir katılımcıdır ve 0–10 arası iki puanının kesiştiği hücreye düşer. Dolan iki köşe, yöntemin yakalamak için kurulduğu karşıt kamplardır.</span>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- =============================== 1 PROBLEM =============================== -->
+<section class="chapter" id="ch-problem">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§1.4 · <span lang="en">Why a joint table</span><span lang="tr">Neden ortak tablo</span></div>
+      <h2><span lang="en">Marginals can't see camps</span><span lang="tr">Marjinal dağılımlar kampları göremez</span></h2>
+      <p class="lede" lang="en">Two items can have identical answer distributions while their respondents pair up in opposite ways. Any index computed from each item on its own returns the same number in both cases.</p>
+      <p class="lede" lang="tr">İki maddenin yanıt dağılımları birebir aynı olabilir; katılımcılar bu yanıtları yine de tam ters biçimlerde eşleştirebilir. Her maddeden ayrı ayrı hesaplanan bir endeks iki durumda da aynı sayıyı verir.</p>
+    </div>
+    <div class="ch-body">
+      <ol class="steps" data-chapter="problem">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Freeze each item's answers</span><span lang="tr">Her maddenin yanıtlarını sabitleyin</span></button></h3>
+          <p lang="en">Both items use a 0–10 like–dislike scale. The grey bars show the share of respondents at each point: a big pile at 0 and a second bump at 10. These two distributions stay fixed for the whole chapter.</p>
+          <p lang="tr">İki madde de 0–10 arası sevme–sevmeme ölçeğinde. Gri çubuklar her puandaki katılımcı payını gösteriyor: 0'da büyük bir yığın, 10'da ikinci bir tepe. Bu iki dağılım bölüm boyunca hiç değişmiyor.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Pair them up as allies</span><span lang="tr">Müttefik gibi eşleştirin</span></button></h3>
+          <p lang="en">Everyone who rates X high also rates Y high. All mass lies on the diagonal, where the two ratings agree, and \(S_{\text{pol}} = 0\).</p>
+          <p lang="tr">X'e yüksek puan veren herkes Y'ye de yüksek puan veriyor. Bütün kütle iki puanın eşit olduğu köşegende durur ve \(S_{\text{pol}} = 0\) olur.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Now pair them as opponents</span><span lang="tr">Şimdi rakip gibi eşleştirin</span></button></h3>
+          <p lang="en">Same bars, but now whoever likes X rejects Y. Mass moves to the off-diagonal corners and \(S_{\text{pol}}\) jumps. The mean and standard deviation of each item have not moved at all.</p>
+          <p lang="tr">Çubuklar aynı, ama bu kez X'i seven Y'yi reddediyor. Kütle köşegen dışındaki köşelere kayar ve \(S_{\text{pol}}\) sıçrar. Her maddenin ortalaması ve standart sapması hiç kıpırdamadı.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">So: work on the joint table</span><span lang="tr">Öyleyse: ortak tabloyla çalışın</span></button></h3>
+          <p lang="en">The method's input is the \((N+1)\times(N+1)\) table of a pair of items, not either margin. It also needs no vote shares or party IDs. Drag the slider to try any coupling between the two extremes.</p>
+          <p lang="tr">Yöntemin girdisi, maddelerin tek tek marjinalleri değil, iki maddenin \((N+1)\times(N+1)\) ortak tablosudur. Oy oranına ya da parti kimliğine de ihtiyaç duymaz. İki uç arasındaki her eşleşmeyi denemek için kaydırıcıyı sürükleyin.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="problem">
+        <div class="stage-main">
+          <div class="fig-title"><span lang="en">Joint table of X and Y with both margins</span><span lang="tr">X ve Y'nin ortak tablosu ve iki marjinal</span></div>
+          <div id="probFig"></div>
+          <div class="ctl">
+            <label for="coupling"><span><span lang="en">How do the two ratings pair up?</span><span lang="tr">İki puan nasıl eşleşiyor?</span></span><output id="couplingOut">0.00</output></label>
+            <input type="range" id="coupling" min="-1" max="1" step="0.01" value="0">
+            <div class="scale-ends"><span lang="en">opposed</span><span lang="tr">karşıt</span><span lang="en">independent</span><span lang="tr">bağımsız</span><span lang="en">aligned</span><span lang="tr">uyumlu</span></div>
+          </div>
+          <div class="readouts" id="probRO"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 2 JOINT TABLE =============================== -->
+<section class="chapter" id="ch-table">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.1 · <span lang="en">Data structure and notation</span><span lang="tr">Veri yapısı ve gösterim</span></div>
+      <h2><span lang="en">Tally the answer pairs into a table</span><span lang="tr">Yanıt çiftlerini bir tabloya sayın</span></h2>
+      <p class="lede" lang="en">From here on we follow a toy survey: 20 respondents rate two items, X and Y, on a 0–4 scale. It is small enough to check every number by hand.</p>
+      <p class="lede" lang="tr">Bundan sonra bir oyuncak anketi izliyoruz: 20 katılımcı X ve Y maddelerini 0–4 ölçeğinde puanlıyor. Her sayıyı elle kontrol edebileceğiniz kadar küçük.</p>
+    </div>
+    <div class="ch-body">
+      <ol class="steps" data-chapter="table">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Fix the scale</span><span lang="tr">Ölçeği belirleyin</span></button></h3>
+          <div class="math">\[\begin{aligned}\mathcal{S}&=\{s_0,\,s_0+1,\,\dots,\,s_0+N\}\\ N&=s_{\max}-s_0\end{aligned}\]</div>
+          <p lang="en">Here \(s_0=0\) and \(N=4\). Index \(i\) is the position of a respondent's X rating and \(j\) of their Y rating, with \(i,j\in\{0,\dots,N\}\).</p>
+          <p lang="tr">Burada \(s_0=0\) ve \(N=4\). \(i\) indeksi katılımcının X puanının, \(j\) ise Y puanının konumudur; \(i,j\in\{0,\dots,N\}\).</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Count every pair</span><span lang="tr">Her çifti sayın</span></button></h3>
+          <div class="math">\[\begin{aligned}a_{ij}&=\#\{k:\ x_k=s_0+i,\ y_k=s_0+j\}\\ n&=\sum_{i=0}^{N}\sum_{j=0}^{N}a_{ij}=20\end{aligned}\]</div>
+          <p lang="en">Each respondent drops into exactly one cell of the count matrix \(\mathbf{A}\). Anyone missing either rating is removed before tabulation (listwise deletion).</p>
+          <p lang="tr">Her katılımcı, sayım matrisi \(\mathbf{A}\)'nın tam olarak bir hücresine düşer. İki puandan biri eksik olanlar tablolamadan önce çıkarılır (liste bazında silme).</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Three regions for polarization</span><span lang="tr">Kutuplaşma için üç bölge</span></button></h3>
+          <p lang="en"><b>Main diagonal</b> \(i=j\): rated both the same, the agreement axis. <b>Lower triangle</b> \(i&gt;j\): rated X higher, the <i>X-leaning</i> group. <b>Upper triangle</b> \(i&lt;j\): rated Y higher, the <i>Y-leaning</i> group.</p>
+          <p lang="tr"><b>Ana köşegen</b> \(i=j\): ikisine aynı puanı verenler, uzlaşma ekseni. <b>Alt üçgen</b> \(i&gt;j\): X'e daha yüksek puan verenler, <i>X'e yakın</i> grup. <b>Üst üçgen</b> \(i&lt;j\): Y'ye daha yüksek puan verenler, <i>Y'ye yakın</i> grup.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Three regions for consensus</span><span lang="tr">Uzlaşı için üç bölge</span></button></h3>
+          <p lang="en">Swap the main diagonal for the <b>anti-diagonal</b> \(i+j=N\): pairs whose ratings sum to the midpoint. Above it, \(i+j&lt;N\), both ratings are low; below it, \(i+j&gt;N\), both are high.</p>
+          <p lang="tr">Ana köşegenin yerine <b>ters köşegeni</b> koyun: \(i+j=N\), puanları toplamı orta noktaya eşit olan çiftler. Üstünde \(i+j&lt;N\) iki puan da düşük; altında \(i+j&gt;N\) iki puan da yüksek.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="table">
+        <div class="stage-main">
+          <div class="fig-title"><span lang="en">20 toy respondents → count matrix A</span><span lang="tr">20 oyuncak katılımcı → sayım matrisi A</span></div>
+          <div class="tokens" id="toyTokens" aria-label="Respondents"></div>
+          <div id="tableFig" style="max-width:420px;width:100%;justify-self:center"></div>
+          <div class="readouts" id="tableRO"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 3 WEIGHTS =============================== -->
+<section class="chapter" id="ch-weights">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.2.1 · <span lang="en">Eq. 8–12</span><span lang="tr">Denk. 8–12</span></div>
+      <h2><span lang="en">Weigh each cell by distance and position</span><span lang="tr">Her hücreyi uzaklık ve konumla ağırlıklandırın</span></h2>
+      <p class="lede" lang="en">Every cell gets a weight built from two normalised terms: how far apart its two ratings are, and where the cell sits relative to the structural axis of the table.</p>
+      <p class="lede" lang="tr">Her hücre, normalize edilmiş iki terimden kurulan bir ağırlık alır: iki puanın birbirinden ne kadar uzak olduğu ve hücrenin tablonun yapısal eksenine göre nerede durduğu.</p>
+    </div>
+    <div class="ch-body">
+      <ol class="steps" data-chapter="weights">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Distance term</span><span lang="tr">Uzaklık terimi</span></button><span class="eq">(8)</span></h3>
+          <div class="math">\[d^{\text{pol}}_{ij}=\frac{|i-j|}{N}\]</div>
+          <p lang="en">0 on the diagonal, 1 in the two far corners \((0,N)\) and \((N,0)\), where one rating is the lowest and the other the highest.</p>
+          <p lang="tr">Köşegende 0, bir puanın en düşük diğerinin en yüksek olduğu iki uç köşede, \((0,N)\) ve \((N,0)\), 1 olur.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Agreement term</span><span lang="tr">Uyum terimi</span></button><span class="eq">(9)</span></h3>
+          <div class="math">\[a^{\text{pol}}_{ij}=1-\frac{|(i+j)-N|}{N}\]</div>
+          <p lang="en">1 on the anti-diagonal \(i+j=N\), where the two ratings sit symmetrically around the scale midpoint: the most opposed configuration. It falls to 0 at \((0,0)\) and \((N,N)\).</p>
+          <p lang="tr">Ters köşegende, \(i+j=N\), 1 olur: iki puan ölçeğin orta noktası etrafında simetriktir, yani en karşıt yapılanma. \((0,0)\) ve \((N,N)\)'de 0'a düşer.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Multiply them</span><span lang="tr">Çarpın</span></button><span class="eq">(12), p = q = 1</span></h3>
+          <div class="math">\[m_{ij}=d_{ij}\cdot a_{ij}\]</div>
+          <p lang="en">Same distance, different weight. On the 0–10 scale the cells \((0,5)\), \((3,8)\) and \((5,10)\) are all five points apart, yet they get 0.25, 0.45 and 0.25. A disagreement that straddles the midpoint counts about 1.8 times as much as one confined to half the scale.</p>
+          <p lang="tr">Aynı uzaklık, farklı ağırlık. 0–10 ölçeğinde \((0,5)\), \((3,8)\) ve \((5,10)\) hücrelerinin hepsi beş puan aralıklıdır, ama 0,25, 0,45 ve 0,25 ağırlık alır. Orta noktanın iki yanına yayılan bir anlaşmazlık, ölçeğin yarısına sıkışmış olandan yaklaşık 1,8 kat fazla sayılır.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">The consensus geometry</span><span lang="tr">Uzlaşı geometrisi</span></button><span class="eq">(10–11)</span></h3>
+          <div class="math">\[d^{\text{con}}_{ij}=\frac{i+j}{N}-1\qquad a^{\text{con}}_{ij}=\frac{N-|i-j|}{N}\]</div>
+          <p lang="en">Now the distance is signed: negative when both ratings are low, positive when both are high. Agreement peaks on the main diagonal. Their product runs from −1 at \((0,0)\) to +1 at \((N,N)\) and is exactly 0 on the anti-diagonal.</p>
+          <p lang="tr">Artık uzaklık işaretlidir: iki puan da düşükse negatif, ikisi de yüksekse pozitif. Uyum ana köşegende en yüksektir. Çarpımları \((0,0)\)'da −1'den \((N,N)\)'de +1'e uzanır ve ters köşegende tam olarak 0'dır.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="weights">
+        <div class="stage-main">
+          <div class="ctl-row">
+            <div class="seg" id="wGeom" role="group" aria-label="Geometry">
+              <button type="button" data-v="pol" aria-pressed="true"><span lang="en">Polarization</span><span lang="tr">Kutuplaşma</span></button>
+              <button type="button" data-v="con" aria-pressed="false"><span lang="en">Consensus</span><span lang="tr">Uzlaşı</span></button>
+            </div>
+            <div class="seg" id="wN" role="group" aria-label="Scale">
+              <button type="button" data-v="4" aria-pressed="true">N = 4</button>
+              <button type="button" data-v="10" aria-pressed="false">N = 10</button>
+            </div>
+          </div>
+          <div class="trio-scroll"><div class="trio" id="wTrio"></div></div>
+          <div class="trio-hint"><span lang="en">Swipe sideways to see all three matrices →</span><span lang="tr">Üç matrisi de görmek için yana kaydırın →</span></div>
+          <div class="inspector" id="wInspect"></div>
+          <div class="caption" id="wCap"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 4 KERNELS =============================== -->
+<section class="chapter" id="ch-kernels">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.2.2–2.2.3 · <span lang="en">Eq. 12–15</span><span lang="tr">Denk. 12–15</span></div>
+      <h2><span lang="en">Bend the distance curve</span><span lang="tr">Uzaklık eğrisini bükün</span></h2>
+      <p class="lede" lang="en">The kernel decides how fast weight grows with distance. Two families are available, and a final rescaling makes them comparable. This chapter is a playground: every control recomputes the 11 × 11 polarization matrix.</p>
+      <p class="lede" lang="tr">Çekirdek, ağırlığın uzaklıkla ne hızla büyüdüğünü belirler. İki aile vardır ve son bir yeniden ölçekleme onları karşılaştırılabilir kılar. Bu bölüm bir deney alanı: her kontrol 11 × 11 kutuplaşma matrisini yeniden hesaplar.</p>
+    </div>
+    <div class="ch-body wide">
+      <ol class="steps" data-chapter="kernels">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Power kernel</span><span lang="tr">Kuvvet çekirdeği</span></button><span class="eq">(12)</span></h3>
+          <div class="math">\[m^{\text{pow}}_{ij}=d_{ij}^{\,p}\cdot a_{ij}^{\,q},\qquad p&gt;0,\ q\ge 0\]</div>
+          <p lang="en">\(p&lt;1\) gives a concave curve: moderate disagreements already weigh a lot. \(p&gt;1\) gives a convex curve that keeps high weights for extreme disagreements only.</p>
+          <p lang="tr">\(p&lt;1\) iç bükey bir eğri verir: orta düzey anlaşmazlıklar da yüksek ağırlık alır. \(p&gt;1\) ise yüksek ağırlıkları yalnızca uç anlaşmazlıklara ayıran dış bükey bir eğri verir.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Agreement exponent</span><span lang="tr">Uyum üssü</span></button><span class="eq">q</span></h3>
+          <p lang="en">\(q\) sets how strongly the cell's position matters. \(q=0\) switches the agreement term off, since \(a^0=1\), so only distance counts. Larger \(q\) concentrates weight near the anti-diagonal.</p>
+          <p lang="tr">\(q\), hücrenin konumunun ne kadar önemli olduğunu belirler. \(q=0\) uyum terimini kapatır, çünkü \(a^0=1\); yalnızca uzaklık sayılır. Daha büyük \(q\) ağırlığı ters köşegenin çevresinde toplar.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Gaussian kernel</span><span lang="tr">Gauss çekirdeği</span></button><span class="eq">(13–14)</span></h3>
+          <div class="math">\[\begin{aligned}g_{ij}&=\Bigl(1-e^{-d_{ij}^2/2\sigma^2}\Bigr)\operatorname{sign}(d_{ij})\\ m^{\text{gauss}}_{ij}&=g_{ij}\cdot a_{ij}^{\,q}\end{aligned}\]</div>
+          <p lang="en">An S-shaped curve with its bend near \(d=\sigma\). A small \(\sigma\) makes a sharp threshold: cells just off the diagonal get almost nothing, cells beyond \(\sigma\) get almost everything.</p>
+          <p lang="tr">Kıvrımı \(d=\sigma\) civarında olan S biçimli bir eğri. Küçük \(\sigma\) keskin bir eşik yaratır: köşegene çok yakın hücreler neredeyse hiç ağırlık almaz, \(\sigma\)'nın ötesindekiler neredeyse tam ağırlık alır.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Normalise</span><span lang="tr">Normalize edin</span></button><span class="eq">(15)</span></h3>
+          <div class="math">\[w_{ij}=\frac{m_{ij}}{\max_{i',j'}|m_{i'j'}|}\]</div>
+          <p lang="en">For the power kernel the largest raw weight is already 1, at the corners, so this step changes nothing. For the Gaussian kernel it is \(1-e^{-1/2\sigma^2}\): 0.9997, 0.8647 and 0.3935 at \(\sigma=\) 0.25, 0.5 and 1. Dividing by it puts \(\mathbf{W}\) on \([-1,1]\) whatever the kernel.</p>
+          <p lang="tr">Kuvvet çekirdeğinde en büyük ham ağırlık zaten köşelerde 1'dir; bu adım hiçbir şeyi değiştirmez. Gauss çekirdeğinde bu değer \(1-e^{-1/2\sigma^2}\)'dir: \(\sigma=\) 0,25, 0,5 ve 1 için 0,9997, 0,8647 ve 0,3935. Buna bölmek, çekirdek ne olursa olsun \(\mathbf{W}\)'yi \([-1,1]\) aralığına yerleştirir.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="kernels">
+        <div class="stage-main">
+          <div class="ctl-row">
+            <div class="seg" id="kKernel" role="group" aria-label="Kernel">
+              <button type="button" data-v="power" aria-pressed="true"><span lang="en">Power</span><span lang="tr">Kuvvet</span></button>
+              <button type="button" data-v="gaussian" aria-pressed="false"><span lang="en">Gaussian</span><span lang="tr">Gauss</span></button>
+            </div>
+          </div>
+          <div class="ctl-row">
+            <div class="ctl" id="kPctl"><label for="kP"><span>p</span><output id="kPout">1.00</output></label><input type="range" id="kP" min="0.25" max="3" step="0.05" value="1"></div>
+            <div class="ctl" id="kSctl" hidden><label for="kS"><span>σ</span><output id="kSout">0.50</output></label><input type="range" id="kS" min="0.1" max="1.5" step="0.05" value="0.5"></div>
+            <div class="ctl"><label for="kQ"><span>q</span><output id="kQout">1.00</output></label><input type="range" id="kQ" min="0" max="3" step="0.25" value="1"></div>
+          </div>
+          <div class="ctl"><span class="lbl"><span lang="en">Specifications from the paper's Table 6</span><span lang="tr">Makalenin Tablo 6'sındaki tanımlar</span></span><div class="chips" id="kPresets"></div></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:start">
+            <div><div class="fig-title"><span lang="en">Distance part of the kernel</span><span lang="tr">Çekirdeğin uzaklık kısmı</span></div><div id="kCurve"></div></div>
+            <div><div class="fig-title"><span lang="en">Normalised weights W (N = 10)</span><span lang="tr">Normalize ağırlıklar W (N = 10)</span></div><div id="kMatrix"></div></div>
+          </div>
+          <div class="readouts" id="kRO"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 5 PROBABILITIES =============================== -->
+<section class="chapter" id="ch-prob">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.3 · <span lang="en">Eq. 16</span><span lang="tr">Denk. 16</span></div>
+      <h2><span lang="en">One table, one denominator</span><span lang="tr">Tek tablo, tek payda</span></h2>
+      <p class="lede" lang="en">Counts become probabilities by dividing every cell by the same \(n\). That single choice is what lets a camp's size show up in its score.</p>
+      <p class="lede" lang="tr">Her hücre aynı \(n\)'ye bölünerek sayılar olasılığa dönüşür. Bir kampın büyüklüğünün skoruna yansımasını sağlayan şey bu tek seçimdir.</p>
+    </div>
+    <div class="ch-body">
+      <ol class="steps" data-chapter="prob">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Divide by n</span><span lang="tr">n'ye bölün</span></button><span class="eq">(16)</span></h3>
+          <div class="math">\[p_{ij}=\frac{a_{ij}}{n},\qquad n=\sum_{i'=0}^{N}\sum_{j'=0}^{N}a_{i'j'}\]</div>
+          <p lang="en">With \(n=20\), each respondent is worth \(1/20 = 0.05\). Cell \((0,4)\) holds 4 respondents, so \(p_{0,4}=0.20\).</p>
+          <p lang="tr">\(n=20\) iken her katılımcı \(1/20 = 0{,}05\) değerindedir. \((0,4)\) hücresinde 4 katılımcı var, yani \(p_{0,4}=0{,}20\).</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">The regions share 100%</span><span lang="tr">Bölgeler %100'ü paylaşır</span></button></h3>
+          <div class="math">\[\sum_{i,j}p_{ij}=1\]</div>
+          <p lang="en">Diagonal 35%, Y-leaning 35%, X-leaning 30%. \(\mathbf{P}\) is the empirical joint distribution of \((X,Y)\), and the two triangles together hold 65% of the sample.</p>
+          <p lang="tr">Köşegen %35, Y'ye yakın %35, X'e yakın %30. \(\mathbf{P}\), \((X,Y)\)'nin ampirik ortak dağılımıdır ve iki üçgen birlikte örneklemin %65'ini tutar.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Why not normalise each triangle?</span><span lang="tr">Neden her üçgeni ayrı normalize etmiyoruz?</span></button></h3>
+          <p lang="en">If each triangle were divided by its own total, both would sum to 1. A camp of 2 people would then score like a camp of 2,000. Global normalisation keeps each camp's share of the whole sample inside its score, so the two triangle scores are directly comparable.</p>
+          <p lang="tr">Her üçgen kendi toplamına bölünseydi ikisi de 1'e toplanırdı. O zaman 2 kişilik bir kamp 2.000 kişilik bir kamp gibi skor alırdı. Genel normalizasyon, her kampın tüm örneklemdeki payını skorunun içinde tutar; böylece iki üçgen skoru doğrudan karşılaştırılabilir.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="prob">
+        <div class="stage-main">
+          <div class="ctl-row">
+            <div class="seg" id="pMode" role="group" aria-label="Normalisation">
+              <button type="button" data-v="global" aria-pressed="true"><span lang="en">Global (paper)</span><span lang="tr">Genel (makale)</span></button>
+              <button type="button" data-v="tri" aria-pressed="false"><span lang="en">Per triangle</span><span lang="tr">Üçgen başına</span></button>
+            </div>
+          </div>
+          <div id="probMx" style="max-width:400px;width:100%;justify-self:center"></div>
+          <div><div class="fig-title" id="pBarTitle"></div><div id="probBar"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 6 SCORES =============================== -->
+<section class="chapter" id="ch-scores">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.4.1 · <span lang="en">Eq. 17–20</span><span lang="tr">Denk. 17–20</span></div>
+      <h2><span lang="en">Multiply, then sum each triangle</span><span lang="tr">Çarpın, sonra her üçgeni toplayın</span></h2>
+      <p class="lede" lang="en">Weights and probabilities meet cell by cell. For the toy scale every weight is a whole number of sixteenths and every probability a whole number of twentieths, so the matrices below show integers and you can redo each sum by hand.</p>
+      <p class="lede" lang="tr">Ağırlıklar ve olasılıklar hücre hücre buluşur. Oyuncak ölçekte her ağırlık on altıda birlerin, her olasılık yirmide birlerin tam katıdır; bu yüzden aşağıdaki matrisler tamsayı gösterir ve her toplamı elle yeniden yapabilirsiniz.</p>
+    </div>
+    <div class="ch-body wide">
+      <ol class="steps" data-chapter="scores">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Hadamard product</span><span lang="tr">Hadamard çarpımı</span></button><span class="eq">(17)</span></h3>
+          <div class="math">\[\mathbf{WP}=\mathbf{W}\circ\mathbf{P},\qquad \mathrm{WP}_{ij}=w_{ij}\,p_{ij}\]</div>
+          <p lang="en">Element-wise, not a matrix product. Cell \((0,4)\): \(w=16/16=1\) and \(p=4/20\), so \(\mathrm{WP}_{0,4}=64/320=0.20\). Diagonal cells have \(w=0\) and drop out.</p>
+          <p lang="tr">Matris çarpımı değil, eleman bazında çarpım. \((0,4)\) hücresi: \(w=16/16=1\) ve \(p=4/20\), yani \(\mathrm{WP}_{0,4}=64/320=0{,}20\). Köşegen hücrelerinde \(w=0\) olduğundan düşerler.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">X-leaning score</span><span lang="tr">X'e yakın grubun skoru</span></button><span class="eq">(18)</span></h3>
+          <div class="math">\[\begin{aligned}S_X&=\sum_{i&gt;j}\mathrm{WP}_{ij}\\&=\frac{4+9+8+48}{320}\\&=\frac{69}{320}=0.215625\end{aligned}\]</div>
+          <p lang="en">The four occupied cells below the diagonal: \((2,0)\) \(4\times1\), \((3,0)\) \(9\times1\), \((3,1)\) \(8\times1\) and \((4,0)\) \(16\times3\), in units of 1/320.</p>
+          <p lang="tr">Köşegenin altındaki dört dolu hücre: \((2,0)\) \(4\times1\), \((3,0)\) \(9\times1\), \((3,1)\) \(8\times1\) ve \((4,0)\) \(16\times3\); birim 1/320.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Y-leaning score</span><span lang="tr">Y'ye yakın grubun skoru</span></button><span class="eq">(19)</span></h3>
+          <div class="math">\[\begin{aligned}S_Y&=\sum_{i&lt;j}\mathrm{WP}_{ij}\\&=\frac{4+9+64+8}{320}\\&=\frac{85}{320}=0.265625\end{aligned}\]</div>
+          <p lang="en">Cells \((0,2)\), \((0,3)\), \((0,4)\) and \((1,3)\). The corner \((0,4)\) alone contributes 64 of the 85.</p>
+          <p lang="tr">\((0,2)\), \((0,3)\), \((0,4)\) ve \((1,3)\) hücreleri. Tek başına \((0,4)\) köşesi 85'in 64'ünü getirir.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Overall bipolarization</span><span lang="tr">Genel iki kutupluluk</span></button><span class="eq">(20)</span></h3>
+          <div class="math">\[\begin{aligned}S_{\text{pol}}&=\sum_{i\neq j}\mathrm{WP}_{ij}=S_X+S_Y\\&=\frac{154}{320}=0.48125\end{aligned}\]</div>
+          <p lang="en">\(S_X\) measures how far respondents who rate X higher form a distinct, internally cohesive group, weighted by that group's share of the sample. \(S_Y\) is the mirror image.</p>
+          <p lang="tr">\(S_X\), X'e daha yüksek puan verenlerin ne ölçüde ayrı ve kendi içinde tutarlı bir grup oluşturduğunu, bu grubun örneklemdeki payıyla ağırlıklandırarak ölçer. \(S_Y\) bunun ayna görüntüsüdür.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="scores">
+        <div class="stage-main">
+          <div class="trio-scroll"><div class="trio" id="sTrio"></div></div>
+          <div class="trio-hint"><span lang="en">Swipe sideways to see all three matrices →</span><span lang="tr">Üç matrisi de görmek için yana kaydırın →</span></div>
+          <div class="sumline" id="sSum"></div>
+          <div id="sBars"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 7 PER PERSON =============================== -->
+<section class="chapter" id="ch-size">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.4.1 · <span lang="en">Eq. 21–22</span><span lang="tr">Denk. 21–22</span></div>
+      <h2><span lang="en">Separate how many from how strongly</span><span lang="tr">Kaç kişi olduğunu ne kadar güçlü olduğundan ayırın</span></h2>
+      <p class="lede" lang="en">A camp can score high because it is large, or because its members sit in heavily weighted cells. Per-person scores pull the two apart.</p>
+      <p class="lede" lang="tr">Bir kamp kalabalık olduğu için de yüksek skor alabilir, üyeleri ağır ağırlıklı hücrelerde durduğu için de. Kişi başı skorlar bu ikisini birbirinden ayırır.</p>
+    </div>
+    <div class="ch-body">
+      <ol class="steps" data-chapter="size">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Group shares</span><span lang="tr">Grup payları</span></button></h3>
+          <div class="math">\[\begin{aligned}n_X&=\sum_{i&gt;j}a_{ij},&\quad \pi_X&=100\,\frac{n_X}{n}\\ n_Y&=\sum_{i&lt;j}a_{ij},&\quad \pi_Y&=100\,\frac{n_Y}{n}\end{aligned}\]</div>
+          <p lang="en">Toy: \(n_X=6\), so \(\pi_X=30\); \(n_Y=7\), so \(\pi_Y=35\). The shares are percentages, not fractions.</p>
+          <p lang="tr">Oyuncak örnek: \(n_X=6\), dolayısıyla \(\pi_X=30\); \(n_Y=7\), dolayısıyla \(\pi_Y=35\). Paylar kesir değil, yüzdedir.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Per-person scores</span><span lang="tr">Kişi başı skorlar</span></button><span class="eq">(21–22)</span></h3>
+          <div class="math">\[\begin{aligned}S^*_X&=\frac{S_X}{\pi_X}=\frac{0.215625}{30}=7.19\times10^{-3}\\ S^*_Y&=\frac{S_Y}{\pi_Y}=\frac{0.265625}{35}=7.59\times10^{-3}\end{aligned}\]</div>
+          <p lang="en">The raw gap \(S_Y-S_X=0.050\) shrinks to \(0.40\times10^{-3}\) per person.</p>
+          <p lang="tr">Ham fark \(S_Y-S_X=0{,}050\), kişi başına \(0{,}40\times10^{-3}\)'e iner.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">What S* really is</span><span lang="tr">S* aslında nedir</span></button></h3>
+          <div class="math">\[\begin{aligned}S^*_X&=\frac{\sum_{i&gt;j}w_{ij}\,a_{ij}/n}{100\,n_X/n}\\&=\frac{1}{100}\cdot\frac{\sum_{i&gt;j}w_{ij}\,a_{ij}}{n_X}\end{aligned}\]</div>
+          <p lang="en">The sample size \(n\) cancels. \(S^*_X\) is the average weight carried by one X-leaning respondent, divided by 100, so it does not depend on how many such respondents there are.</p>
+          <p lang="tr">Örneklem büyüklüğü \(n\) sadeleşir. \(S^*_X\), X'e yakın bir katılımcının taşıdığı ortalama ağırlığın 100'e bölümüdür; dolayısıyla bu katılımcılardan kaç tane olduğuna bağlı değildir.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Grow one camp</span><span lang="tr">Bir kampı büyütün</span></button></h3>
+          <p lang="en">The slider clones the Y-leaning respondents, keeping their pattern. Raw \(S_Y\) climbs (and \(S_X\) falls, because \(n\) grows), while both per-person scores stay flat.</p>
+          <p lang="tr">Kaydırıcı, Y'ye yakın katılımcıları aynı örüntüyle çoğaltır. Ham \(S_Y\) yükselir (ve \(n\) büyüdüğü için \(S_X\) düşer); iki kişi başı skor ise yerinden oynamaz.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">In the paper: AKP × CHP</span><span lang="tr">Makalede: AKP × CHP</span></button></h3>
+          <p lang="en">The raw difference \(S_X-S_Y=-0.053\), 95% CI \([-0.078,-0.028]\), excludes zero. The per-person difference \(\Delta^*=0.02\times10^{-3}\), CI \([-0.29,\,0.35]\times10^{-3}\), comfortably contains it. The CHP-leaning camp is about 9.5 points larger, but per respondent the two camps are structured identically.</p>
+          <p lang="tr">Ham fark \(S_X-S_Y=-0{,}053\), %95 GA \([-0{,}078,-0{,}028]\), sıfırı dışlar. Kişi başı fark \(\Delta^*=0{,}02\times10^{-3}\), GA \([-0{,}29,\,0{,}35]\times10^{-3}\), sıfırı rahatça içerir. CHP'ye yakın kamp yaklaşık 9,5 puan daha büyüktür, ama katılımcı başına iki kamp aynı biçimde yapılanmıştır.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="size">
+        <div class="stage-main">
+          <div class="ctl">
+            <label for="grow"><span><span lang="en">Size of the Y-leaning camp</span><span lang="tr">Y'ye yakın kampın büyüklüğü</span></span><output id="growOut">×1</output></label>
+            <input type="range" id="grow" min="0" max="8" step="1" value="2">
+          </div>
+          <div id="sizeDots"></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+            <div><div class="fig-title"><span lang="en">Raw scores S (size × intensity)</span><span lang="tr">Ham skorlar S (büyüklük × yoğunluk)</span></div><div id="sizeRaw"></div></div>
+            <div><div class="fig-title"><span lang="en">Per-person scores S* × 10³</span><span lang="tr">Kişi başı skorlar S* × 10³</span></div><div id="sizePer"></div></div>
+          </div>
+          <div class="caption" id="sizeCap"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 8 CONSENSUS =============================== -->
+<section class="chapter" id="ch-consensus">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.4.2 · <span lang="en">Eq. 23–25</span><span lang="tr">Denk. 23–25</span></div>
+      <h2><span lang="en">Shared conviction runs along the other diagonal</span><span lang="tr">Ortak kanaat öbür köşegen boyunca ölçülür</span></h2>
+      <p class="lede" lang="en">The same pipeline with the consensus weights asks a different question: do respondents share a strong view of both items, warm or cold?</p>
+      <p class="lede" lang="tr">Aynı işlem hattı uzlaşı ağırlıklarıyla farklı bir soru sorar: katılımcılar iki madde hakkında ortak ve güçlü bir görüşe, sıcak ya da soğuk, sahip mi?</p>
+    </div>
+    <div class="ch-body wide">
+      <ol class="steps" data-chapter="consensus">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Weights and the anti-diagonal split</span><span lang="tr">Ağırlıklar ve ters köşegen ayrımı</span></button></h3>
+          <p lang="en">\(\mathbf{W}^{\text{con}}\) is negative above the anti-diagonal and positive below it. The 11 toy respondents on the anti-diagonal get weight 0.</p>
+          <p lang="tr">\(\mathbf{W}^{\text{con}}\) ters köşegenin üstünde negatif, altında pozitiftir. Ters köşegendeki 11 oyuncak katılımcı 0 ağırlık alır.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Shared rejection</span><span lang="tr">Ortak ret</span></button><span class="eq">(23)</span></h3>
+          <div class="math">\[\begin{aligned}S_{\text{neg}}&=\sum_{i+j&lt;N}\mathrm{WP}_{ij}\\&=\frac{-48-4-1-8-4-1}{320}\\&=\frac{-66}{320}=-0.20625\end{aligned}\]</div>
+          <p lang="en">The three people at \((0,0)\) dominate: \(-16\times3=-48\).</p>
+          <p lang="tr">\((0,0)\)'daki üç kişi belirleyicidir: \(-16\times3=-48\).</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Shared warmth</span><span lang="tr">Ortak sıcaklık</span></button><span class="eq">(24)</span></h3>
+          <div class="math">\[S_{\text{pos}}=\sum_{i+j&gt;N}\mathrm{WP}_{ij}=\frac{16\times1}{320}=0.05\]</div>
+          <p lang="en">Only one respondent rates both items high, at \((4,4)\).</p>
+          <p lang="tr">İki maddeye de yüksek puan veren tek katılımcı \((4,4)\)'te.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Net consensus</span><span lang="tr">Net uzlaşı</span></button><span class="eq">(25)</span></h3>
+          <div class="math">\[S_{\text{con}}=S_{\text{neg}}+S_{\text{pos}}=-0.15625\]</div>
+          <p lang="en">A negative score means shared rejection outweighs shared warmth. In the paper, \(S_{\text{con}}&lt;0\) for all 78 party pairs.</p>
+          <p lang="tr">Negatif skor, ortak retin ortak sıcaklıktan ağır bastığı anlamına gelir. Makalede 78 parti çiftinin hepsinde \(S_{\text{con}}&lt;0\).</p>
+          <p class="note" lang="en">The paper normalises consensus globally (Eq. 16), like polarization. Package versions up to 0.2.2 normalise each half separately, which gives different consensus values (§3.9). This page follows the paper.</p>
+          <p class="note" lang="tr">Makale uzlaşıyı da kutuplaşma gibi genel olarak normalize eder (Denk. 16). Paketin 0.2.2'ye kadarki sürümleri her yarıyı ayrı normalize eder ve farklı uzlaşı değerleri verir (§3.9). Bu sayfa makaleyi izler.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="consensus">
+        <div class="stage-main">
+          <div class="trio-scroll"><div class="trio" id="cTrio"></div></div>
+          <div class="trio-hint"><span lang="en">Swipe sideways to see all three matrices →</span><span lang="tr">Üç matrisi de görmek için yana kaydırın →</span></div>
+          <div class="sumline" id="cSum"></div>
+          <div id="cBars"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 9 BOOTSTRAP =============================== -->
+<section class="chapter" id="ch-boot">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.5 · <span lang="en">Eq. 26–28</span><span lang="tr">Denk. 26–28</span></div>
+      <h2><span lang="en">Resample respondents to measure uncertainty</span><span lang="tr">Belirsizliği ölçmek için katılımcıları yeniden örnekleyin</span></h2>
+      <p class="lede" lang="en">The scores are descriptive. A non-parametric bootstrap adds sampling uncertainty: redraw the sample many times and watch how much the scores move.</p>
+      <p class="lede" lang="tr">Skorlar betimseldir. Parametrik olmayan bootstrap örnekleme belirsizliğini ekler: örneklemi defalarca yeniden çekin ve skorların ne kadar oynadığını izleyin.</p>
+    </div>
+    <div class="ch-body wide">
+      <ol class="steps" data-chapter="boot">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Draw n respondents with replacement</span><span lang="tr">Yerine koyarak n katılımcı çekin</span></button><span class="eq">(26)</span></h3>
+          <div class="math">\[\begin{aligned}\mathcal{D}^{(b)}&=\{(x_{k^*_1},y_{k^*_1}),\dots,(x_{k^*_n},y_{k^*_n})\}\\ k^*_1,\dots,k^*_n&\overset{\text{iid}}{\sim}\text{Uniform}\{1,\dots,n\}\end{aligned}\]</div>
+          <p lang="en">Whole respondents are drawn, so each \((x,y)\) pair stays together and the joint structure survives. Some respondents appear twice, some not at all.</p>
+          <p lang="tr">Katılımcılar bütün olarak çekilir; böylece her \((x,y)\) çifti birlikte kalır ve ortak yapı korunur. Bazı katılımcılar iki kez gelir, bazıları hiç gelmez.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Re-run the whole pipeline</span><span lang="tr">Tüm işlem hattını yeniden çalıştırın</span></button></h3>
+          <p lang="en">Tabulate \(\mathbf{A}^{(b)}\), form \(\mathbf{P}^{(b)}=\mathbf{A}^{(b)}/n\), recompute every score, including the per-person scores (numerator and denominator alike). \(\mathbf{W}\) depends only on \(N\) and the kernel, so it never changes; all the variability comes through \(\mathbf{P}\).</p>
+          <p lang="tr">\(\mathbf{A}^{(b)}\)'yi tablolayın, \(\mathbf{P}^{(b)}=\mathbf{A}^{(b)}/n\)'yi kurun ve kişi başı skorlar dahil her skoru (pay ve paydasıyla birlikte) yeniden hesaplayın. \(\mathbf{W}\) yalnızca \(N\)'ye ve çekirdeğe bağlıdır, hiç değişmez; tüm değişkenlik \(\mathbf{P}\) üzerinden gelir.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Repeat B = 2,000 times</span><span lang="tr">B = 2.000 kez tekrarlayın</span></button></h3>
+          <p lang="en">Now on the full-size simulated AKP × CHP sample (\(n=2218\)). Each replicate adds one value to each histogram. Press Run to watch the distributions form.</p>
+          <p lang="tr">Şimdi tam boyutlu simüle AKP × CHP örnekleminde (\(n=2218\)). Her tekrar her histograma bir değer ekler. Dağılımların oluşmasını izlemek için Çalıştır'a basın.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Standard error</span><span lang="tr">Standart hata</span></button><span class="eq">(27)</span></h3>
+          <div class="math">\[\begin{aligned}\widehat{\mathrm{SE}}&=\sqrt{\frac{1}{B-1}\sum_{b=1}^{B}\bigl(S^{(b)}-\bar S\bigr)^2}\\ \bar S&=\frac{1}{B}\sum_{b=1}^{B}S^{(b)}\end{aligned}\]</div>
+          <p lang="en">The spread of the replicates. The bootstrap bias estimate is \(\bar S-\hat S\).</p>
+          <p lang="tr">Tekrarların yayılımı. Bootstrap yanlılık tahmini \(\bar S-\hat S\)'dir.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Percentile interval</span><span lang="tr">Yüzdelik aralığı</span></button><span class="eq">(28)</span></h3>
+          <div class="math">\[\mathrm{CI}_{1-\alpha}=\bigl[\hat q_{\alpha/2},\ \hat q_{1-\alpha/2}\bigr]\]</div>
+          <p lang="en">Read straight off the sorted replicates, not \(\hat S\pm1.96\,\widehat{\mathrm{SE}}\). Per-person scores are ratios of two noisy quantities, and their distributions can be skewed.</p>
+          <p lang="tr">Doğrudan sıralanmış tekrarlardan okunur, \(\hat S\pm1{,}96\,\widehat{\mathrm{SE}}\) olarak değil. Kişi başı skorlar iki gürültülü niceliğin oranıdır ve dağılımları çarpık olabilir.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Compare camps within replicates</span><span lang="tr">Kampları tekrarların içinde karşılaştırın</span></button></h3>
+          <div class="math">\[\Delta^{*(b)}=S^{*(b)}_X-S^{*(b)}_Y\]</div>
+          <p lang="en">\(S_X\) and \(S_Y\) come from the same table, so they are not independent. Take the difference inside each replicate, then read its percentile interval. Here it straddles zero: the two camps have the same per-person intensity.</p>
+          <p lang="tr">\(S_X\) ve \(S_Y\) aynı tablodan gelir, bağımsız değildir. Farkı her tekrarın içinde alın, sonra yüzdelik aralığını okuyun. Burada aralık sıfırı kapsar: iki kampın kişi başı yoğunluğu aynıdır.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="boot">
+        <div class="stage-main">
+          <div id="bootToy">
+            <div class="ctl-row" style="justify-content:space-between;align-items:center">
+              <div class="fig-title"><span lang="en">Toy sample: one bootstrap replicate</span><span lang="tr">Oyuncak örneklem: tek bir bootstrap tekrarı</span></div>
+              <button type="button" class="btn" id="bootDraw"><span lang="en">Draw a replicate</span><span lang="tr">Bir tekrar çekin</span></button>
+            </div>
+            <div class="tokens" id="bootTokens" style="margin-top:10px"></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:10px;align-items:center">
+              <div id="bootToyMx" style="max-width:300px;width:100%;justify-self:center"></div>
+              <div class="readouts" id="bootToyRO" style="grid-template-columns:1fr 1fr"></div>
+            </div>
+          </div>
+          <div id="bootBig" hidden>
+            <div class="ctl-row" style="justify-content:space-between;align-items:center">
+              <div class="seg" id="bootB" role="group" aria-label="B">
+                <button type="button" data-v="200" aria-pressed="false">B = 200</button>
+                <button type="button" data-v="1000" aria-pressed="false">1,000</button>
+                <button type="button" data-v="2000" aria-pressed="true">2,000</button>
+              </div>
+              <button type="button" class="btn primary" id="bootRun"><svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z"/></svg><span lang="en">Run</span><span lang="tr">Çalıştır</span></button>
+            </div>
+            <div class="fig-title" style="margin-top:12px"><span lang="en">Per-person scores across replicates (× 10³)</span><span lang="tr">Tekrarlar boyunca kişi başı skorlar (× 10³)</span></div>
+            <div id="bootHist"></div>
+            <div class="fig-title" id="bootDeltaTitle"><span lang="en">Within-replicate difference Δ* (× 10³)</span><span lang="tr">Tekrar içi fark Δ* (× 10³)</span></div>
+            <div id="bootDelta"></div>
+            <div class="tbl-wrap"><table class="data" id="bootTable"></table></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 10 RESULTS =============================== -->
+<section class="chapter" id="ch-results">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§3 · <span lang="en">Turkey General Social Survey 2024</span><span lang="tr">Türkiye Genel Sosyal Saha Araştırması 2024</span></div>
+      <h2><span lang="en">What it finds in a real party system</span><span lang="tr">Gerçek bir parti sisteminde neler buluyor</span></h2>
+      <p class="lede" lang="en">The paper applies the method to thirteen party-affinity items (“How close or distant do you feel to party P?”, 0 = very distant, 10 = very close), giving 78 party pairs. Tab A uses the simulated AKP × CHP table; tabs B–E draw the paper's published numbers.</p>
+      <p class="lede" lang="tr">Makale yöntemi on üç parti yakınlık maddesine uygular (“P partisine kendinizi ne kadar yakın ya da uzak hissediyorsunuz?”, 0 = çok uzak, 10 = çok yakın); bu 78 parti çifti verir. A sekmesi simüle AKP × CHP tablosunu kullanır; B–E sekmeleri makalede yayımlanan sayıları çizer.</p>
+    </div>
+    <div class="tabs" role="tablist" id="resTabs">
+      <button type="button" role="tab" id="tab-a" aria-controls="res-a" aria-selected="true">A · <span lang="en">Worked pair</span><span lang="tr">Örnek çift</span></button>
+      <button type="button" role="tab" id="tab-b" aria-controls="res-b" aria-selected="false">B · <span lang="en">All 78 pairs</span><span lang="tr">78 çiftin tamamı</span></button>
+      <button type="button" role="tab" id="tab-c" aria-controls="res-c" aria-selected="false">C · <span lang="en">Salience</span><span lang="tr">Belirginlik</span></button>
+      <button type="button" role="tab" id="tab-d" aria-controls="res-d" aria-selected="false">D · <span lang="en">Kernel choice</span><span lang="tr">Çekirdek seçimi</span></button>
+      <button type="button" role="tab" id="tab-e" aria-controls="res-e" aria-selected="false">E · <span lang="en">Party map</span><span lang="tr">Parti haritası</span></button>
+    </div>
+
+    <div class="panel" role="tabpanel" id="res-a" aria-labelledby="tab-a">
+      <div class="fig">
+        <div class="ctl-row" style="justify-content:space-between">
+          <div class="fig-title"><span lang="en">Simulated AKP × CHP table, n = 2,218</span><span lang="tr">Simüle AKP × CHP tablosu, n = 2.218</span></div>
+          <div class="seg" id="aMode" role="group" aria-label="Show">
+            <button type="button" data-v="A" aria-pressed="false"><span lang="en">Counts A</span><span lang="tr">Sayımlar A</span></button>
+            <button type="button" data-v="WP" aria-pressed="true"><span lang="en">Contributions WP</span><span lang="tr">Katkılar WP</span></button>
+          </div>
+        </div>
+        <div id="aMx" style="max-width:520px;width:100%;justify-self:center"></div>
+        <div class="caption" lang="en">Rows: AKP affinity <i>i</i>; columns: CHP affinity <i>j</i>. Simulated table; see the note at the bottom of the page.</div>
+        <div class="caption" lang="tr">Satırlar: AKP yakınlığı <i>i</i>; sütunlar: CHP yakınlığı <i>j</i>. Simüle tablo; sayfanın altındaki nota bakın.</div>
+      </div>
+      <div class="txt">
+        <h3><span lang="en">Two corners carry the score</span><span lang="tr">Skoru iki köşe taşıyor</span></h3>
+        <p lang="en">Cell \((0,10)\), maximally distant from AKP and maximally close to CHP, holds 311 respondents and contributes 0.140. Its mirror \((10,0)\) holds 259 and contributes 0.117. Together they make up 57% of \(S_{\text{pol}}\) while holding only 26% of the respondents. This is the weighting working as designed: extreme, midpoint-straddling disagreement is what \(\mathbf{W}\) is built to detect.</p>
+        <p lang="tr">AKP'ye en uzak ve CHP'ye en yakın \((0,10)\) hücresinde 311 katılımcı vardır ve 0,140 katkı yapar. Ayna hücresi \((10,0)\)'da 259 kişi vardır ve 0,117 katkı yapar. İkisi birlikte katılımcıların yalnızca %26'sını tutarken \(S_{\text{pol}}\)'un %57'sini oluşturur. Ağırlıklandırma tasarlandığı gibi çalışıyor: \(\mathbf{W}\) tam da orta noktanın iki yanına yayılan uç anlaşmazlığı yakalamak için kurulmuştur.</p>
+        <div class="readouts" id="aRO"></div>
+      </div>
+    </div>
+
+    <div class="panel" role="tabpanel" id="res-b" aria-labelledby="tab-b" hidden>
+      <div class="fig">
+        <div class="fig-title"><span lang="en">Below the diagonal: S<sub>pol</sub>. Above: S<sub>con</sub>. (Table 3)</span><span lang="tr">Köşegenin altı: S<sub>pol</sub>. Üstü: S<sub>con</sub>. (Tablo 3)</span></div>
+        <div id="bMx" style="max-width:600px;width:100%;justify-self:center"></div>
+        <div class="legend">
+          <span><i class="sw pos"></i><span lang="en">S<sub>pol</sub>, darker = more polarized</span><span lang="tr">S<sub>pol</sub>, koyu = daha kutuplaşmış</span></span>
+          <span><i class="sw neg"></i><span lang="en">S<sub>con</sub>, darker = stronger shared rejection</span><span lang="tr">S<sub>con</sub>, koyu = daha güçlü ortak ret</span></span>
+        </div>
+      </div>
+      <div class="txt">
+        <h3><span lang="en">Structured, not diffuse</span><span lang="tr">Dağınık değil, yapılı</span></h3>
+        <p lang="en">\(S_{\text{pol}}\) spans a factor of fifteen, from 0.029 for DEVA × GP to 0.453 for AKP × CHP. Every one of the ten most polarized pairs involves the AKP, the CHP or the MHP. Pairs of two small parties are squeezed into the bottom of the range.</p>
+        <p lang="tr">\(S_{\text{pol}}\) on beş kat bir aralığa yayılır: DEVA × GP için 0,029'dan AKP × CHP için 0,453'e. En kutuplaşmış on çiftin her biri AKP, CHP ya da MHP'yi içerir. İki küçük partiden oluşan çiftler aralığın dibine sıkışır.</p>
+        <p lang="en">\(S_{\text{con}}&lt;0\) for all 78 pairs: no pair of parties attracts net shared warmth. The dominant shared attitude is rejection of the party system in general.</p>
+        <p lang="tr">78 çiftin hepsinde \(S_{\text{con}}&lt;0\): hiçbir parti çifti net ortak sıcaklık görmüyor. Baskın ortak tutum, parti sisteminin genel olarak reddedilmesi.</p>
+        <div class="tbl-wrap"><table class="data" id="bTop"></table></div>
+      </div>
+    </div>
+
+    <div class="panel" role="tabpanel" id="res-c" aria-labelledby="tab-c" hidden>
+      <div class="fig">
+        <div class="fig-title"><span lang="en">Mean affinity vs. mean S<sub>pol</sub> against the other 12 parties (Table 2)</span><span lang="tr">Ortalama yakınlık ve diğer 12 partiye karşı ortalama S<sub>pol</sub> (Tablo 2)</span></div>
+        <div id="cScatter"></div>
+      </div>
+      <div class="txt">
+        <h3><span lang="en">Polarization tracks salience</span><span lang="tr">Kutuplaşma belirginliği izliyor</span></h3>
+        <p lang="en">Across the thirteen parties, the party-level average of \(S_{\text{pol}}\) is almost a linear function of how warmly the party is rated on average (<span id="cR">r = 0.97</span>). A party that four fifths of respondents put at 0 sends nearly all its mass to cells near \((0,0)\), where distance and agreement terms are both small.</p>
+        <p lang="tr">On üç parti genelinde, \(S_{\text{pol}}\)'un parti düzeyindeki ortalaması partinin ortalama ne kadar sıcak değerlendirildiğinin neredeyse doğrusal bir fonksiyonudur (<span id="cR2">r = 0,97</span>). Katılımcıların beşte dördünün 0 verdiği bir parti, kütlesinin neredeyse tamamını uzaklık ve uyum terimlerinin ikisinin de küçük olduğu \((0,0)\) çevresine gönderir.</p>
+        <p lang="en">The residuals are the informative part. DEM sits furthest above the line (+0.031): rated 0 by 79.6% of respondents, yet strongly embraced by a small constituency. İYİ and YRP sit furthest below it. Rank parties by the residual or by \(\overline{S}^*\), not by raw averages.</p>
+        <p lang="tr">Asıl bilgi artıklarda. DEM çizginin en üstünde (+0,031): katılımcıların %79,6'sı 0 veriyor, ama küçük bir seçmen kitlesi onu güçlü biçimde benimsiyor. İYİ ve YRP çizginin en altında. Partileri ham ortalamalara göre değil, artığa ya da \(\overline{S}^*\)'a göre sıralayın.</p>
+      </div>
+    </div>
+
+    <div class="panel" role="tabpanel" id="res-d" aria-labelledby="tab-d" hidden>
+      <div class="fig">
+        <div class="fig-title"><span lang="en">AKP × CHP S<sub>pol</sub> with 95% CI under eight specifications (Table 6)</span><span lang="tr">Sekiz tanım altında AKP × CHP S<sub>pol</sub> ve %95 GA (Tablo 6)</span></div>
+        <div id="dChart"></div>
+        <div class="legend">
+          <span><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--ink-2)" stroke-width="2"/><circle cx="11" cy="5" r="4" fill="var(--ink)"/></svg><span lang="en">published estimate and CI</span><span lang="tr">yayımlanan tahmin ve GA</span></span>
+          <span><svg width="12" height="12" aria-hidden="true"><path d="M6 1 11 6 6 11 1 6z" fill="var(--sheet)" stroke="var(--pen)" stroke-width="2"/></svg><span lang="en">this page, simulated table</span><span lang="tr">bu sayfa, simüle tablo</span></span>
+        </div>
+      </div>
+      <div class="txt">
+        <h3><span lang="en">Levels move, the ranking does not</span><span lang="tr">Düzeyler oynar, sıralama oynamaz</span></h3>
+        <p lang="en">The leading pair ranges from 0.386 with a convex distance curve (\(p=2\)) to 0.534 with the agreement term switched off (\(q=0\)). Yet the Spearman correlation between the 78 pairs' scores under any alternative and under the default never falls below 0.9949.</p>
+        <p lang="tr">Önde gelen çift, dış bükey uzaklık eğrisiyle (\(p=2\)) 0,386'dan uyum terimi kapatıldığında (\(q=0\)) 0,534'e kadar değişir. Yine de 78 çiftin herhangi bir alternatif altındaki skorlarıyla varsayılan altındaki skorları arasındaki Spearman korelasyonu hiçbir zaman 0,9949'un altına düşmez.</p>
+        <p lang="en">Report absolute levels together with the kernel that produced them. Comparative claims, which pair divides more than which, survive every specification examined.</p>
+        <p lang="tr">Mutlak düzeyleri onları üreten çekirdekle birlikte raporlayın. Karşılaştırmalı iddialar, hangi çiftin hangisinden daha bölücü olduğu, incelenen her tanımda geçerliliğini korur.</p>
+        <div class="tbl-wrap"><table class="data" id="dTable"></table></div>
+      </div>
+    </div>
+
+    <div class="panel" role="tabpanel" id="res-e" aria-labelledby="tab-e" hidden>
+      <div class="fig">
+        <div class="fig-title"><span lang="en">Classical MDS of the 78 S<sub>pol</sub> scores, computed in your browser from Table 3</span><span lang="tr">78 S<sub>pol</sub> skorunun klasik ÇBÖ'sü, Tablo 3'ten tarayıcınızda hesaplandı</span></div>
+        <div id="eMap"></div>
+        <div class="caption" id="eCap"></div>
+      </div>
+      <div class="txt">
+        <h3><span lang="en">The cleavage falls out of the numbers</span><span lang="tr">Ayrışma sayılardan kendiliğinden çıkıyor</span></h3>
+        <p lang="en">Because the 78 scores form a symmetric matrix with a zero diagonal, they can be read as dissimilarities and embedded in two dimensions. The first coordinate orders the parties along the government–opposition axis, AKP and MHP on one side and CHP on the other, although no such information was given to the procedure.</p>
+        <p lang="tr">78 skor, köşegeni sıfır olan simetrik bir matris oluşturduğu için farklılık ölçüsü olarak okunup iki boyuta yerleştirilebilir. Prosedüre böyle bir bilgi verilmediği halde, ilk koordinat partileri iktidar–muhalefet ekseninde sıralar: bir yanda AKP ve MHP, öbür yanda CHP.</p>
+        <p lang="en">Steps: square the dissimilarities, double-centre them, \(\mathbf{B}=-\tfrac12\mathbf{J}\mathbf{D}^{(2)}\mathbf{J}\), and take the top two eigenvectors scaled by \(\sqrt{\lambda}\). Lines join pairs with \(S_{\text{pol}}&gt;0.29\); marker area follows mean affinity.</p>
+        <p lang="tr">Adımlar: farklılıkların karesini alın, çift merkezleyin, \(\mathbf{B}=-\tfrac12\mathbf{J}\mathbf{D}^{(2)}\mathbf{J}\), ve \(\sqrt{\lambda}\) ile ölçeklenmiş ilk iki özvektörü alın. Çizgiler \(S_{\text{pol}}&gt;0{,}29\) olan çiftleri birleştirir; işaret alanı ortalama yakınlığı izler.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 11 RECIPE =============================== -->
+<section class="chapter" id="ch-recipe">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow"><span lang="en">Summary</span><span lang="tr">Özet</span></div>
+      <h2><span lang="en">The whole method on one card</span><span lang="tr">Tüm yöntem tek kartta</span></h2>
+    </div>
+    <div class="recipe-wrap">
+    <ol class="recipe">
+      <li><h3><span lang="en">Tabulate</span><span lang="tr">Tablolayın</span></h3><p lang="en">Drop incomplete pairs, count \(a_{ij}\) into the \((N+1)\times(N+1)\) matrix \(\mathbf{A}\).</p><p lang="tr">Eksik çiftleri atın, \(a_{ij}\)'leri \((N+1)\times(N+1)\) boyutlu \(\mathbf{A}\) matrisine sayın.</p></li>
+      <li><h3><span lang="en">Build W</span><span lang="tr">W'yi kurun</span></h3><p lang="en">\(d\) and \(a\) from Eq. 8–9 (or 10–11), kernel \(m=d^p a^q\), then \(w=m/\max|m|\).</p><p lang="tr">Denk. 8–9'dan (ya da 10–11'den) \(d\) ve \(a\), çekirdek \(m=d^p a^q\), sonra \(w=m/\max|m|\).</p></li>
+      <li><h3><span lang="en">Normalise globally</span><span lang="tr">Genel normalize edin</span></h3><p lang="en">\(\mathbf{P}=\mathbf{A}/n\), one denominator for the whole table.</p><p lang="tr">\(\mathbf{P}=\mathbf{A}/n\), tüm tablo için tek payda.</p></li>
+      <li><h3><span lang="en">Weight</span><span lang="tr">Ağırlıklandırın</span></h3><p lang="en">\(\mathbf{WP}=\mathbf{W}\circ\mathbf{P}\), cell by cell.</p><p lang="tr">\(\mathbf{WP}=\mathbf{W}\circ\mathbf{P}\), hücre hücre.</p></li>
+      <li><h3><span lang="en">Sum the regions</span><span lang="tr">Bölgeleri toplayın</span></h3><p lang="en">\(S_X\), \(S_Y\), \(S_{\text{pol}}\) over the triangles; \(S_{\text{neg}}\), \(S_{\text{pos}}\), \(S_{\text{con}}\) over the anti-diagonal halves.</p><p lang="tr">Üçgenler üzerinden \(S_X\), \(S_Y\), \(S_{\text{pol}}\); ters köşegen yarıları üzerinden \(S_{\text{neg}}\), \(S_{\text{pos}}\), \(S_{\text{con}}\).</p></li>
+      <li><h3><span lang="en">Divide by size</span><span lang="tr">Büyüklüğe bölün</span></h3><p lang="en">\(S^*_X=S_X/\pi_X\), \(S^*_Y=S_Y/\pi_Y\): intensity per respondent.</p><p lang="tr">\(S^*_X=S_X/\pi_X\), \(S^*_Y=S_Y/\pi_Y\): katılımcı başına yoğunluk.</p></li>
+      <li><h3><span lang="en">Bootstrap respondents</span><span lang="tr">Katılımcıları bootstrap'leyin</span></h3><p lang="en">\(B=2000\) resamples of whole rows; SE from the SD, CI from percentiles, differences within replicates.</p><p lang="tr">Satırların bütün olarak \(B=2000\) kez yeniden örneklenmesi; SH standart sapmadan, GA yüzdeliklerden, farklar tekrarların içinde.</p></li>
+    </ol>
+    <div class="recipe-code">
+      <div class="fig-title"><span lang="en">The same pipeline in the Python package</span><span lang="tr">Aynı işlem hattı Python paketinde</span></div>
+<pre class="code tex2jax_ignore"><span class="c"># pip install bipolarization</span>
+from polarization import calculate_scores, dashboard_pair
+
+r = calculate_scores(df, <span class="s">"akp"</span>, <span class="s">"chp"</span>,
+                     score_type=<span class="s">"polarization"</span>, kernel=<span class="s">"power"</span>,
+                     p=1.0, q=1.0, B=2000, random_state=42)
+r[<span class="s">"point"</span>][<span class="s">"overall"</span>]            <span class="c"># S_pol</span>
+r[<span class="s">"point"</span>][<span class="s">"akp_per_person"</span>]     <span class="c"># S*_X</span>
+r[<span class="s">"bootstrap"</span>][<span class="s">"overall"</span>][<span class="s">"ci"</span>]  <span class="c"># 95% percentile CI</span>
+
+dashboard_pair(df, <span class="s">"akp"</span>, <span class="s">"chp"</span>, score_type=<span class="s">"polarization"</span>)</pre>
+    </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p lang="en"><b>About the data.</b> The toy survey (20 respondents, 0–4 scale) is invented for illustration. The AKP × CHP table is <b>simulated</b>: it was reconstructed so that every per-cell contribution matches Figure 2(c) of the paper to three decimals and its group shares, scores and margins match the published values. It is not the TGSS microdata. Bootstrap results on this page come from that simulated table and a seeded generator. Tabs B–E of the results show values published in Tables 2, 3, 4 and 6.</p>
+    <p lang="tr"><b>Veri hakkında.</b> Oyuncak anket (20 katılımcı, 0–4 ölçeği) açıklama amacıyla uydurulmuştur. AKP × CHP tablosu <b>simüledir</b>: her hücre katkısı makalenin Şekil 2(c)'siyle üç ondalık basamağa kadar, grup payları, skorları ve marjinalleri de yayımlanan değerlerle örtüşecek biçimde yeniden kurulmuştur. TGSS mikro verisi değildir. Bu sayfadaki bootstrap sonuçları o simüle tablodan ve tohumlanmış bir üreteçten gelir. Bulgular bölümünün B–E sekmeleri Tablo 2, 3, 4 ve 6'da yayımlanan değerleri gösterir.</p>
+    <p lang="en">Method and software: <code>bipolarization</code> Python package v0.2.2 and its R port <code>bipolarizationR</code>, Nişancı, Yüce &amp; Kavdır. Equation numbers follow the paper.</p>
+    <p lang="tr">Yöntem ve yazılım: <code>bipolarization</code> Python paketi v0.2.2 ve R sürümü <code>bipolarizationR</code>, Nişancı, Yüce ve Kavdır. Denklem numaraları makaleyi izler.</p>
+  </div>
+</footer>
+</div>
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>
+/* ============================================================
+   Data
+   TOY  - invented 20-respondent survey on a 0-4 scale.
+   SIM  - simulated AKP (rows, i) x CHP (columns, j) count table, n = 2,218.
+          Reconstructed so that W o P matches Figure 2(c) of the paper to
+          three decimals and the shares, scores and margins match the
+          published values. Not the TGSS microdata.
+   PARTIES, T3, T4, T6 - published values from Tables 2, 3, 4 and 6.
+   ============================================================ */
+const TOY = [
+  [3, 0, 1, 1, 4],
+  [0, 1, 0, 1, 0],
+  [1, 0, 2, 0, 0],
+  [1, 1, 0, 0, 0],
+  [3, 0, 0, 0, 1],
+];
+const SIM = [
+  [309, 28, 7, 19, 21, 85, 49, 68, 98, 36, 311],
+  [22, 10, 1, 1, 1, 5, 10, 3, 11, 11, 7],
+  [1, 1, 10, 5, 2, 9, 7, 12, 9, 2, 5],
+  [13, 1, 10, 10, 15, 20, 12, 13, 3, 1, 6],
+  [7, 1, 2, 15, 12, 12, 16, 1, 4, 0, 0],
+  [58, 5, 1, 20, 12, 66, 13, 7, 7, 0, 22],
+  [22, 1, 1, 12, 5, 13, 10, 1, 1, 2, 0],
+  [48, 3, 12, 8, 1, 7, 1, 8, 1, 0, 0],
+  [51, 2, 9, 8, 4, 9, 1, 1, 8, 1, 7],
+  [37, 3, 1, 1, 1, 2, 2, 2, 0, 4, 1],
+  [259, 10, 7, 11, 9, 22, 6, 12, 7, 1, 1],
+];
+/* Table 2 */
+const PARTIES = [
+  { a: "CHP", en: "Republican People's Party", tr: "Cumhuriyet Halk Partisi", n: 2268, mean: 4.09, sd: 3.85, at0: 37.3, ge8: 25.4, spol: 0.304, scon: -0.382, ss: 5.00 },
+  { a: "AKP", en: "Justice and Development Party", tr: "Adalet ve Kalkınma Partisi", n: 2272, mean: 3.44, sd: 3.90, at0: 46.5, ge8: 22.6, spol: 0.264, scon: -0.455, ss: 4.96 },
+  { a: "MHP", en: "Nationalist Movement Party", tr: "Milliyetçi Hareket Partisi", n: 2233, mean: 2.96, sd: 3.58, at0: 49.2, ge8: 16.4, spol: 0.221, scon: -0.491, ss: 4.31 },
+  { a: "YRP", en: "New Welfare Party", tr: "Yeniden Refah Partisi", n: 2159, mean: 2.01, sd: 2.97, at0: 59.0, ge8: 8.6, spol: 0.157, scon: -0.582, ss: 3.20 },
+  { a: "DEM", en: "Peoples' Equality and Democracy Party", tr: "Halkların Eşitlik ve Demokrasi Partisi", n: 2259, mean: 1.06, sd: 2.57, at0: 79.6, ge8: 6.2, spol: 0.155, scon: -0.664, ss: 4.40 },
+  { a: "ZP", en: "Victory Party", tr: "Zafer Partisi", n: 2125, mean: 1.74, sd: 2.88, at0: 63.7, ge8: 7.4, spol: 0.153, scon: -0.609, ss: 3.22 },
+  { a: "TİP", en: "Workers' Party of Turkey", tr: "Türkiye İşçi Partisi", n: 2125, mean: 1.44, sd: 2.60, at0: 68.3, ge8: 5.0, spol: 0.146, scon: -0.630, ss: 2.98 },
+  { a: "İYİ", en: "Good Party", tr: "İYİ Parti", n: 2204, mean: 1.45, sd: 2.32, at0: 62.5, ge8: 2.5, spol: 0.126, scon: -0.631, ss: 1.96 },
+  { a: "MP", en: "Homeland Party", tr: "Memleket Partisi", n: 2113, mean: 1.31, sd: 2.34, at0: 67.4, ge8: 3.2, spol: 0.125, scon: -0.649, ss: 2.27 },
+  { a: "SP", en: "Felicity Party", tr: "Saadet Partisi", n: 2163, mean: 1.18, sd: 2.19, at0: 68.8, ge8: 2.6, spol: 0.122, scon: -0.661, ss: 2.05 },
+  { a: "HÜDAPAR", en: "Free Cause Party", tr: "Hür Dava Partisi", n: 2144, mean: 0.61, sd: 1.69, at0: 83.2, ge8: 1.2, spol: 0.120, scon: -0.707, ss: 2.24 },
+  { a: "DEVA", en: "Democracy and Progress Party", tr: "Demokrasi ve Atılım Partisi", n: 2141, mean: 0.80, sd: 1.80, at0: 76.8, ge8: 1.2, spol: 0.113, scon: -0.698, ss: 1.62 },
+  { a: "GP", en: "Future Party", tr: "Gelecek Partisi", n: 2067, mean: 0.82, sd: 1.80, at0: 75.5, ge8: 1.2, spol: 0.111, scon: -0.698, ss: 1.48 },
+];
+/* Table 3: rows/cols in this order; lower triangle S_pol, upper S_con */
+const T3_ORDER = ["AKP", "CHP", "DEVA", "GP", "HÜDAPAR", "DEM", "İYİ", "MP", "MHP", "SP", "TİP", "YRP", "ZP"];
+const T3_TEXT = `
+AKP — −.20 −.53 −.53 −.56 −.49 −.46 −.48 −.36 −.50 −.45 −.44 −.44
+CHP .45 — −.46 −.46 −.45 −.43 −.40 −.42 −.24 −.41 −.41 −.33 −.38
+DEVA .25 .28 — −.82 −.83 −.78 −.73 −.75 −.57 −.77 −.74 −.68 −.71
+GP .24 .27 .03 — −.82 −.78 −.74 −.76 −.58 −.77 −.74 −.68 −.71
+HÜDAPAR .23 .31 .04 .04 — −.81 −.74 −.76 −.59 −.78 −.75 −.70 −.71
+DEM .31 .29 .08 .08 .08 — −.69 −.71 −.52 −.73 −.72 −.64 −.67
+İYİ .25 .26 .06 .06 .08 .12 — −.69 −.51 −.69 −.66 −.61 −.65
+MP .26 .26 .06 .06 .08 .12 .07 — −.53 −.71 −.68 −.62 −.67
+MHP .15 .39 .20 .20 .19 .26 .19 .20 — −.54 −.49 −.47 −.49
+SP .23 .29 .05 .05 .06 .10 .08 .08 .20 — −.69 −.65 −.67
+TİP .30 .24 .09 .08 .09 .09 .11 .10 .26 .10 — −.60 −.64
+YRP .21 .33 .11 .11 .11 .16 .13 .13 .18 .10 .16 — −.58
+ZP .28 .26 .10 .10 .12 .16 .10 .08 .22 .12 .13 .16 —`;
+const T3 = T3_TEXT.trim().split("\n").map(line => line.trim().split(/\s+/).slice(1).map(s => (s === "—" ? 0 : parseFloat(s.replace("−", "-")))));
+/* Table 4: ten most and five least polarized dyads */
+const T4 = [
+  ["AKP × CHP", 2218, 35.2, 44.6, 0.453, 0.436, 0.469, 5.68, 5.66, 0.02, -0.29, 0.35],
+  ["CHP × MHP", 2191, 45.1, 30.6, 0.393, 0.377, 0.409, 5.45, 4.79, 0.66, 0.32, 1.01],
+  ["CHP × YRP", 2129, 48.1, 21.9, 0.326, 0.311, 0.341, 5.22, 3.39, 1.83, 1.49, 2.15],
+  ["CHP × HÜDAPAR", 2113, 57.3, 7.2, 0.315, 0.299, 0.330, 5.21, 2.29, 2.93, 2.45, 3.36],
+  ["AKP × DEM", 2198, 47.2, 12.5, 0.308, 0.292, 0.324, 5.25, 4.87, 0.38, -0.12, 0.89],
+  ["AKP × TİP", 2089, 43.9, 19.6, 0.299, 0.284, 0.314, 5.26, 3.46, 1.80, 1.44, 2.17],
+  ["CHP × DEM", 2201, 53.7, 8.2, 0.293, 0.277, 0.308, 4.91, 3.59, 1.32, 0.71, 1.85],
+  ["CHP × SP", 2138, 52.5, 11.6, 0.292, 0.277, 0.306, 5.06, 2.25, 2.81, 2.43, 3.18],
+  ["AKP × ZP", 2097, 39.8, 21.6, 0.285, 0.269, 0.301, 5.30, 3.41, 1.89, 1.50, 2.27],
+  ["CHP × DEVA", 2110, 54.8, 5.2, 0.277, 0.263, 0.292, 4.91, 1.57, 3.34, 2.89, 3.72],
+  ["DEVA × GP", 2032, 9.5, 10.6, 0.029, 0.024, 0.033, 1.48, 1.36, 0.12, -0.22, 0.47],
+  ["DEVA × HÜDAPAR", 2075, 15.5, 8.2, 0.044, 0.039, 0.049, 1.59, 2.32, -0.73, -1.17, -0.29],
+  ["GP × HÜDAPAR", 2012, 16.7, 8.6, 0.045, 0.039, 0.051, 1.52, 2.24, -0.72, -1.17, -0.29],
+  ["GP × SP", 2035, 10.5, 17.7, 0.051, 0.045, 0.057, 1.49, 1.98, -0.49, -0.84, -0.14],
+  ["DEVA × SP", 2099, 9.2, 18.2, 0.052, 0.046, 0.058, 1.57, 2.03, -0.46, -0.79, -0.09],
+];
+/* Table 6: [label en, label tr, opts, max|m|, Spol, lo, hi, mean, min, max, rho] */
+const T6 = [
+  ["Power, p = 1, q = 1 (default)", "Kuvvet, p = 1, q = 1 (varsayılan)", { kernel: "power", p: 1, q: 1 }, 1.0, 0.453, 0.436, 0.469, 0.163, 0.029, 0.453, 1.0],
+  ["Power, p = 0.5, q = 1", "Kuvvet, p = 0.5, q = 1", { kernel: "power", p: 0.5, q: 1 }, 1.0, 0.512, 0.496, 0.528, 0.201, 0.048, 0.512, 0.9954],
+  ["Power, p = 2, q = 1", "Kuvvet, p = 2, q = 1", { kernel: "power", p: 2, q: 1 }, 1.0, 0.386, 0.369, 0.403, 0.124, 0.014, 0.386, 0.9968],
+  ["Power, p = 1, q = 0", "Kuvvet, p = 1, q = 0", { kernel: "power", p: 1, q: 0 }, 1.0, 0.534, 0.518, 0.550, 0.222, 0.052, 0.534, 0.9949],
+  ["Power, p = 1, q = 2", "Kuvvet, p = 1, q = 2", { kernel: "power", p: 1, q: 2 }, 1.0, 0.404, 0.388, 0.421, 0.133, 0.019, 0.404, 0.9989],
+  ["Gaussian, σ = 0.25, q = 1", "Gauss, σ = 0.25, q = 1", { kernel: "gaussian", sigma: 0.25, q: 1 }, 0.9997, 0.532, 0.516, 0.549, 0.206, 0.040, 0.532, 0.9970],
+  ["Gaussian, σ = 0.5, q = 1", "Gauss, σ = 0.5, q = 1", { kernel: "gaussian", sigma: 0.5, q: 1 }, 0.8647, 0.443, 0.426, 0.459, 0.154, 0.022, 0.443, 0.9990],
+  ["Gaussian, σ = 1, q = 1", "Gauss, σ = 1, q = 1", { kernel: "gaussian", sigma: 1, q: 1 }, 0.3935, 0.401, 0.384, 0.417, 0.132, 0.016, 0.401, 0.9976],
+];
+
+"use strict";
+/* ============================================================
+   Core: utilities, language, colour, maths, model, components
+   ============================================================ */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const SVGNS = "http://www.w3.org/2000/svg";
+function S(tag, attrs = {}, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function H(tag, attrs = {}, html) {
+  const e = document.createElement(tag);
+  for (const k in attrs) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+  if (html != null) e.innerHTML = html;
+  return e;
+}
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const MINUS = "−";
+function f(x, d = 3) {
+  if (!isFinite(x)) return "–";
+  const s = Math.abs(x).toFixed(d);
+  return (x < 0 && +s !== 0 ? MINUS : "") + s;
+}
+/* ".45" style for compact cells */
+function fc(x, d = 2) {
+  const s = f(x, d);
+  return s.replace(/^(−?)0\./, "$1.");
+}
+function tween(dur, fn) {
+  return new Promise(res => {
+    if (REDUCED || dur <= 0) { fn(1); res(); return; }
+    const t0 = performance.now();
+    const tick = now => {
+      const t = clamp((now - t0) / dur, 0, 1);
+      fn(ease(t));
+      if (t < 1) requestAnimationFrame(tick); else res();
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+/* ---------- language ---------- */
+let LANG = "en";
+const langHooks = [];
+const T = (en, tr) => (LANG === "tr" ? tr : en);
+function onLang(fn) { langHooks.push(fn); }
+function setLang(l, save = true) {
+  LANG = l;
+  $("#app").dataset.lang = l;
+  document.documentElement.lang = l;
+  $$(".lang button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === l)));
+  if (save) { try { localStorage.setItem("bipol-lang", l); } catch (e) { /* storage unavailable */ } }
+  langHooks.forEach(fn => fn());
+}
+
+/* ---------- colour (OKLab mixing, theme tokens) ---------- */
+function parseColor(c) {
+  c = c.trim();
+  if (c[0] === "#") {
+    if (c.length === 4) c = "#" + [...c.slice(1)].map(x => x + x).join("");
+    return [1, 3, 5].map(k => parseInt(c.slice(k, k + 2), 16));
+  }
+  const m = c.match(/[\d.]+/g);
+  return m ? m.slice(0, 3).map(Number) : [128, 128, 128];
+}
+const toLin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+const fromLin = v => 255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055);
+function rgb2lab([r, g, b]) {
+  r = toLin(r); g = toLin(g); b = toLin(b);
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+          1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+          0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
+}
+function lab2rgb([L, a, b]) {
+  const l = Math.pow(L + 0.3963377774 * a + 0.2158037573 * b, 3);
+  const m = Math.pow(L - 0.1055613458 * a - 0.0638541728 * b, 3);
+  const s = Math.pow(L - 0.0894841775 * a - 1.291485548 * b, 3);
+  return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+          -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+          -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s].map(v => clamp(Math.round(fromLin(v)), 0, 255));
+}
+function mixLab(A, B, t) { return [0, 1, 2].map(k => lerp(A[k], B[k], t)); }
+const rgbStr = c => `rgb(${c[0]},${c[1]},${c[2]})`;
+function luminance([r, g, b]) { return 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b); }
+function contrast(a, b) { const x = luminance(a), y = luminance(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+
+const C = {};               // resolved theme colours
+const themeHooks = [];
+function readPalette() {
+  const cs = getComputedStyle(document.documentElement);
+  const v = n => cs.getPropertyValue(n).trim() || "#888";
+  for (const k of ["paper", "sheet", "ink", "ink-2", "muted", "rule", "grid", "pen", "camp-x", "camp-y", "diag",
+    "neg-3", "neg-2", "neg-1", "mid", "pos-1", "pos-2", "pos-3"]) C[k] = v("--" + k);
+  const lab = k => rgb2lab(parseColor(C[k]));
+  C.lab = {
+    pos: [lab("mid"), lab("pos-1"), lab("pos-2"), lab("pos-3")],
+    neg: [lab("mid"), lab("neg-1"), lab("neg-2"), lab("neg-3")],
+    mass: [lab("mid"), mixLab(lab("mid"), lab("ink-2"), 0.4), lab("ink-2"), lab("ink")],
+  };
+  C.inkRGB = parseColor(C.ink); C.sheetRGB = parseColor(C.sheet);
+}
+function rampRGB(stops, t) {
+  t = clamp(t, 0, 1) * (stops.length - 1);
+  const k = Math.min(Math.floor(t), stops.length - 2);
+  return lab2rgb(mixLab(stops[k], stops[k + 1], t - k));
+}
+const ramp = (name, t) => rgbStr(rampRGB(C.lab[name], t));
+/* diverging: v in [-1, 1] */
+const div = v => v >= 0 ? ramp("pos", v) : ramp("neg", -v);
+function textOn(fill) {
+  const c = parseColor(fill);
+  return contrast(c, C.inkRGB) >= contrast(c, C.sheetRGB) ? C.ink : C.sheet;
+}
+function onTheme(fn) { themeHooks.push(fn); }
+function watchTheme() {
+  const fire = () => { readPalette(); themeHooks.forEach(fn => fn()); };
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", fire);
+  new MutationObserver(fire).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "class"] });
+}
+
+/* ---------- MathJax helpers ---------- */
+const pendingTex = new Set();
+function tex(el, src, display = false) {
+  el.dataset.tex = src;
+  el.dataset.display = display ? "1" : "";
+  if (window.MathJax && MathJax.tex2svg && window.__mjReady) {
+    try { el.replaceChildren(MathJax.tex2svg(src, { display })); pendingTex.delete(el); return; } catch (e) { /* fall through */ }
+  }
+  const s = H("span", { class: "tex-fallback" }); s.textContent = src;
+  el.replaceChildren(s);
+  pendingTex.add(el);
+}
+function flushTex() { [...pendingTex].forEach(el => tex(el, el.dataset.tex, !!el.dataset.display)); }
+
+/* ---------- tooltip ---------- */
+const tip = { el: null };
+function showTip(html, ev) {
+  const t = tip.el || (tip.el = $("#tip"));
+  t.innerHTML = html; t.classList.add("on");
+  const pad = 14, w = t.offsetWidth, h = t.offsetHeight;
+  let x = ev.clientX + pad, y = ev.clientY + pad;
+  if (x + w > innerWidth - 8) x = ev.clientX - w - pad;
+  if (y + h > innerHeight - 8) y = ev.clientY - h - pad;
+  t.style.left = Math.max(8, x) + "px"; t.style.top = Math.max(8, y) + "px";
+}
+function hideTip() { tip.el && tip.el.classList.remove("on"); }
+addEventListener("scroll", hideTip, { passive: true });
+
+/* ============================================================
+   Model: mirrors polarization/weights.py and scores.py
+   ============================================================ */
+function rawWeights(N, { type = "polarization", kernel = "power", p = 1, q = 1, sigma = 0.5 } = {}) {
+  const M = [];
+  for (let i = 0; i <= N; i++) {
+    M.push([]);
+    for (let j = 0; j <= N; j++) {
+      let d, a;
+      if (type === "polarization") { d = Math.abs(i - j) / N; a = 1 - Math.abs(i + j - N) / N; }
+      else { d = (i + j) / N - 1; a = (N - Math.abs(i - j)) / N; }
+      let g;
+      if (kernel === "power") g = Math.pow(d, p);
+      else g = (1 - Math.exp(-(d * d) / (2 * sigma * sigma))) * Math.sign(d);
+      M[i].push(g * Math.pow(a, q));
+    }
+  }
+  return M;
+}
+function weights(N, opts) {
+  const M = rawWeights(N, opts);
+  let mx = 0;
+  M.forEach(r => r.forEach(v => { mx = Math.max(mx, Math.abs(v)); }));
+  const W = M.map(r => r.map(v => (mx > 0 ? v / mx : v)));
+  return { M, W, max: mx };
+}
+const total = A => A.reduce((s, r) => s + r.reduce((a, b) => a + b, 0), 0);
+function polScores(A, W) {
+  const n = total(A), K = A.length;
+  let SX = 0, SY = 0, nX = 0, nY = 0, n0 = 0;
+  for (let i = 0; i < K; i++) for (let j = 0; j < K; j++) {
+    const a = A[i][j], wp = W[i][j] * a / n;
+    if (i > j) { SX += wp; nX += a; } else if (i < j) { SY += wp; nY += a; } else n0 += a;
+  }
+  const piX = 100 * nX / n, piY = 100 * nY / n;
+  return { n, SX, SY, Spol: SX + SY, nX, nY, n0, piX, piY, pi0: 100 * n0 / n,
+    sX: piX > 0 ? SX / piX : 0, sY: piY > 0 ? SY / piY : 0 };
+}
+function conScores(A, W) {
+  const n = total(A), K = A.length, N = K - 1;
+  let Sneg = 0, Spos = 0, nneg = 0, npos = 0, nanti = 0;
+  for (let i = 0; i < K; i++) for (let j = 0; j < K; j++) {
+    const a = A[i][j], wp = W[i][j] * a / n;
+    if (i + j < N) { Sneg += wp; nneg += a; } else if (i + j > N) { Spos += wp; npos += a; } else nanti += a;
+  }
+  return { n, Sneg, Spos, Scon: Sneg + Spos, nneg, npos, nanti };
+}
+/* seeded PRNG (mulberry32) */
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function quantile(sorted, q) {
+  const pos = (sorted.length - 1) * q, lo = Math.floor(pos), hi = Math.ceil(pos);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+}
+function sd(arr) {
+  const m = arr.reduce((a, b) => a + b, 0) / arr.length;
+  return Math.sqrt(arr.reduce((a, b) => a + (b - m) * (b - m), 0) / (arr.length - 1));
+}
+const zeros = K => Array.from({ length: K }, () => new Array(K).fill(0));
+
+/* ============================================================
+   MatrixView: an SVG heat-table with regions, guides, hover
+   ============================================================ */
+function MatrixView(host, o) {
+  const n = o.n, c = o.cell || 30, L = o.left ?? 30, Tp = o.top ?? 30, gap = o.gap ?? 1.5;
+  const Wd = L + n * c + (o.right ?? 4), Ht = Tp + n * c + (o.bottom ?? 4);
+  const svg = S("svg", { viewBox: `0 0 ${Wd} ${Ht}`, class: "mx", role: "img", "aria-label": o.label || "matrix" });
+  const gTicks = S("g", {}, svg), gCells = S("g", {}, svg), gOver = S("g", {}, svg);
+  const rowLab = o.rowLabels || [...Array(n).keys()], colLab = o.colLabels || [...Array(n).keys()];
+  const fs = o.fs || Math.max(7, c * 0.36);
+  if (o.ticks !== false) {
+    rowLab.forEach((t, k) => { const e = S("text", { x: L - 5, y: Tp + k * c + c / 2, class: "tick", "text-anchor": "end", "dominant-baseline": "central" }, gTicks); e.textContent = t; });
+    colLab.forEach((t, k) => {
+      const x = L + k * c + c / 2, y = Tp - 5;
+      const e = o.rotateCols
+        ? S("text", { x, y, class: "tick", "text-anchor": "start", transform: `rotate(-55 ${x} ${y})` }, gTicks)
+        : S("text", { x, y, class: "tick", "text-anchor": "middle" }, gTicks);
+      e.textContent = t;
+    });
+  }
+  const axT = {};
+  if (o.rowTitle != null) { axT.row = S("text", { class: "axt", "text-anchor": "middle", transform: `translate(${o.rowTitleX ?? 9} ${Tp + n * c / 2}) rotate(-90)` }, gTicks); }
+  if (o.colTitle != null) { axT.col = S("text", { class: "axt", "text-anchor": "middle", x: L + n * c / 2, y: o.colTitleY ?? 10 }, gTicks); }
+  function titles() {
+    if (axT.row) axT.row.textContent = typeof o.rowTitle === "function" ? o.rowTitle() : o.rowTitle;
+    if (axT.col) axT.col.textContent = typeof o.colTitle === "function" ? o.colTitle() : o.colTitle;
+  }
+  titles(); onLang(titles);
+  const cells = [];
+  for (let i = 0; i < n; i++) {
+    cells.push([]);
+    for (let j = 0; j < n; j++) {
+      const g = S("g", { class: "cell" }, gCells);
+      const r = S("rect", { x: L + j * c + gap / 2, y: Tp + i * c + gap / 2, width: c - gap, height: c - gap, rx: 1.5 }, g);
+      const t = S("text", { x: L + j * c + c / 2, y: Tp + i * c + c / 2, "font-size": fs }, g);
+      g.addEventListener("pointerenter", ev => o.onHover && o.onHover(i, j, ev));
+      g.addEventListener("pointermove", ev => o.onMove && o.onMove(i, j, ev));
+      g.addEventListener("click", ev => o.onClick && o.onClick(i, j, ev));
+      cells[i].push({ g, r, t });
+    }
+  }
+  svg.addEventListener("pointerleave", () => { hideTip(); o.onLeave && o.onLeave(); });
+  host.appendChild(svg);
+  const api = {
+    svg, n, c, L, T: Tp, cells,
+    x: j => L + j * c, y: i => Tp + i * c,
+    set(vals, { fill, text } = {}) {
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+        const v = vals[i][j], { r, t } = cells[i][j];
+        const fl = fill ? fill(v, i, j) : C.mid;
+        r.style.fill = fl;
+        const s = text ? text(v, i, j) : "";
+        t.textContent = s;
+        t.style.fill = textOn(fl);
+      }
+    },
+    dim(keep) {
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) cells[i][j].g.classList.toggle("dim", !!keep && !keep(i, j));
+    },
+    ping(list) {
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) cells[i][j].g.classList.remove("ping");
+      (list || []).forEach(([i, j]) => cells[i][j].g.classList.add("ping"));
+    },
+    regions(list) {
+      gOver.querySelectorAll(".region,.rlabel").forEach(e => e.remove());
+      (list || []).forEach(rg => {
+        let d = "";
+        for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+          if (!rg.cells(i, j)) continue;
+          const x0 = L + j * c, y0 = Tp + i * c, x1 = x0 + c, y1 = y0 + c;
+          if (i === 0 || !rg.cells(i - 1, j)) d += `M${x0} ${y0}H${x1}`;
+          if (i === n - 1 || !rg.cells(i + 1, j)) d += `M${x0} ${y1}H${x1}`;
+          if (j === 0 || !rg.cells(i, j - 1)) d += `M${x0} ${y0}V${y1}`;
+          if (j === n - 1 || !rg.cells(i, j + 1)) d += `M${x1} ${y0}V${y1}`;
+        }
+        S("path", { d, class: "region", stroke: rg.color, "stroke-linecap": "square" }, gOver);
+        if (rg.label) {
+          const [li, lj] = rg.at;
+          const t = S("text", { x: L + lj * c + c / 2, y: Tp + li * c + c / 2, class: "rlabel", "text-anchor": rg.anchor || "middle", "dominant-baseline": "central", fill: rg.textColor || C.ink }, gOver);
+          t.textContent = rg.label;
+        }
+      });
+    },
+    guide(kind) {
+      gOver.querySelectorAll(".guide").forEach(e => e.remove());
+      if (kind === "diag") S("line", { x1: L, y1: Tp, x2: L + n * c, y2: Tp + n * c, class: "guide" }, gOver);
+      if (kind === "anti") S("line", { x1: L + n * c, y1: Tp, x2: L, y2: Tp + n * c, class: "guide" }, gOver);
+    },
+    live(on) { svg.classList.toggle("live", on); },
+  };
+  return api;
+}
+
+/* ---------- small chart helpers ---------- */
+function axisLinear(d0, d1, r0, r1) {
+  const s = v => r0 + (v - d0) / (d1 - d0) * (r1 - r0);
+  s.inv = px => d0 + (px - r0) / (r1 - r0) * (d1 - d0);
+  return s;
+}
+function niceTicks(lo, hi, count = 5) {
+  const span = hi - lo, step0 = span / count, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => span / s <= count) || 10 * mag;
+  const out = [];
+  for (let v = Math.ceil(lo / step - 1e-9) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+/* horizontal bar list: rows [{label, value, color, note}] */
+function HBars(host, { max, width = 360, row = 26, labelW = 70, fmt = v => f(v, 3) }) {
+  const svg = S("svg", { class: "chart", role: "img" });
+  host.appendChild(svg);
+  return {
+    svg,
+    draw(rows, mx = max) {
+      svg.replaceChildren();
+      const Ht = rows.length * row + 4;
+      svg.setAttribute("viewBox", `0 0 ${width} ${Ht}`);
+      const x = axisLinear(0, mx, labelW, width - 58);
+      rows.forEach((r, k) => {
+        const y = k * row + 4;
+        const lab = S("text", { x: labelW - 8, y: y + row / 2 - 2, "text-anchor": "end", "dominant-baseline": "central", class: "axt" }, svg);
+        lab.textContent = r.label;
+        S("rect", { x: labelW, y: y + 3, width: Math.max(0, x(Math.min(r.value, mx)) - labelW), height: row - 10, rx: 2, fill: r.color }, svg);
+        const v = S("text", { x: x(Math.min(r.value, mx)) + 6, y: y + row / 2 - 2, "dominant-baseline": "central", "font-size": 11.5 }, svg);
+        v.textContent = r.text != null ? r.text : fmt(r.value);
+      });
+    },
+  };
+}
+
+/* ============================================================
+   Chapter controller: step list + stage footer + autoplay
+   ============================================================ */
+const ICON = {
+  prev: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.6 2.2 4.8 8l5.8 5.8 1.2-1.2L7.2 8l4.6-4.6z"/></svg>',
+  next: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.4 2.2 11.2 8l-5.8 5.8-1.2-1.2L8.8 8 4.2 3.4z"/></svg>',
+  play: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>',
+  pause: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5h3v11H4zm5 0h3v11H9z"/></svg>',
+};
+const chapters = {};
+function Chapter(name, steps) {
+  const list = $(`.steps[data-chapter="${name}"]`), stage = $(`.stage[data-chapter="${name}"]`);
+  const items = $$(".step", list);
+  const foot = H("div", { class: "stage-foot" });
+  const prev = H("button", { type: "button", class: "icon-btn" }, ICON.prev);
+  const where = H("div", { class: "where", "aria-live": "polite" });
+  const next = H("button", { type: "button", class: "icon-btn" }, ICON.next);
+  const play = H("button", { type: "button", class: "icon-btn play-btn" });
+  foot.append(prev, where, next, play);
+  stage.appendChild(foot);
+  let cur = -1, playing = false, timer = null, token = 0;
+  const title = k => { const h = items[k].querySelector(`h3 [lang="${LANG}"]`) || items[k].querySelector("h3"); return h.textContent.trim(); };
+  function paint() {
+    items.forEach((li, i) => { li.classList.toggle("on", i === cur); li.querySelector("h3 button").setAttribute("aria-current", i === cur ? "step" : "false"); });
+    where.innerHTML = `<b>${cur + 1}/${items.length}</b>${title(cur)}`;
+    prev.disabled = cur <= 0; next.disabled = cur >= items.length - 1;
+    prev.setAttribute("aria-label", T("Previous step", "Önceki adım"));
+    next.setAttribute("aria-label", T("Next step", "Sonraki adım"));
+    play.innerHTML = (playing ? ICON.pause : ICON.play) + `<span class="t">${playing ? T("Pause", "Duraklat") : T("Play", "Oynat")}</span>`;
+    play.setAttribute("aria-label", playing ? T("Pause", "Duraklat") : T("Play all steps", "Tüm adımları oynat"));
+  }
+  function go(k, opts = {}) {
+    k = clamp(k, 0, items.length - 1);
+    const from = cur; cur = k; token++;
+    paint();
+    steps[k].enter({ from, instant: !!opts.instant, token, alive: t => t === token });
+  }
+  function stop() { playing = false; clearTimeout(timer); paint(); }
+  function schedule() {
+    clearTimeout(timer);
+    if (!playing) return;
+    if (cur >= items.length - 1) { stop(); return; }
+    timer = setTimeout(() => { go(cur + 1); schedule(); }, REDUCED ? 2600 : (steps[cur].dur || 3800));
+  }
+  items.forEach((li, i) => li.addEventListener("click", ev => { if (ev.target.closest("a")) return; stop(); if (i !== cur) go(i); }));
+  prev.addEventListener("click", () => { stop(); go(cur - 1); });
+  next.addEventListener("click", () => { stop(); go(cur + 1); });
+  play.addEventListener("click", () => {
+    if (playing) { stop(); return; }
+    playing = true;
+    if (cur >= items.length - 1) go(0); else if (cur < 0) go(0);
+    paint(); schedule();
+  });
+  onLang(paint);
+  const api = { go, stop, get cur() { return cur; }, steps };
+  chapters[name] = api;
+  return api;
+}
+
+/* ============================================================
+   Hero: 2,218 simulated respondents fall into the AKP x CHP table
+   ============================================================ */
+function Hero() {
+  const cv = $("#heroCanvas"), ctx = cv.getContext("2d");
+  const N = 10, K = 11, Wt = weights(N).W;
+  let dots = [], geo = null, t0 = 0, raf = 0, prog = REDUCED ? 99 : 0;
+  const R = rng(7);
+  const gauss = () => { let u = 0, v = 0; while (!u) u = R(); while (!v) v = R(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  // stable dot list
+  const base = [];
+  for (let i = 0; i < K; i++) for (let j = 0; j < K; j++) {
+    const c = SIM[i][j], side = Math.ceil(Math.sqrt(c));
+    for (let k = 0; k < c; k++) base.push({ i, j, k, side, camp: i > j ? "x" : i < j ? "y" : "d", sx: gauss(), sy: gauss(), delay: R() * 0.55 });
+  }
+  function layout() {
+    const w = cv.clientWidth || 400, dpr = Math.min(2, devicePixelRatio || 1);
+    cv.width = Math.round(w * dpr); cv.height = Math.round(w * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const L = 34, Tp = 34, g = w - L - 8, c = g / K;
+    geo = { w, L, Tp, c };
+    dots = base.map(d => {
+      const inner = c * 0.86, sp = inner / d.side, off = (c - inner) / 2 + sp / 2;
+      const r = Math.floor(d.k / d.side), q = d.k % d.side;
+      return { ...d, tx: L + d.j * c + off + q * sp, ty: Tp + d.i * c + off + r * sp,
+        fx: w * 0.55 + d.sx * w * 0.16, fy: w * 0.5 + d.sy * w * 0.16, size: Math.max(1.2, Math.min(2.6, sp * 0.8)) };
+    });
+  }
+  function draw(p) {
+    const { w, L, Tp, c } = geo;
+    ctx.clearRect(0, 0, w, w);
+    const tint = clamp((p - 1.05) / 0.5, 0, 1);
+    // cells
+    for (let i = 0; i < K; i++) for (let j = 0; j < K; j++) {
+      ctx.fillStyle = C.mid;
+      ctx.fillRect(L + j * c + 0.75, Tp + i * c + 0.75, c - 1.5, c - 1.5);
+      if (tint > 0 && Wt[i][j] > 0) {
+        ctx.globalAlpha = tint * 0.6;
+        ctx.fillStyle = ramp("pos", Wt[i][j] * 0.75);
+        ctx.fillRect(L + j * c + 0.75, Tp + i * c + 0.75, c - 1.5, c - 1.5);
+        ctx.globalAlpha = 1;
+      }
+    }
+    // ticks
+    ctx.fillStyle = C.muted; ctx.font = `10px ${getComputedStyle(document.body).getPropertyValue("--mono") || "monospace"}`;
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    for (let k = 0; k < K; k++) ctx.fillText(String(k), L - 5, Tp + k * c + c / 2);
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    for (let k = 0; k < K; k++) ctx.fillText(String(k), L + k * c + c / 2, Tp - 6);
+    ctx.fillStyle = C["ink-2"]; ctx.font = `600 11px Archivo, system-ui, sans-serif`;
+    ctx.fillText(T("CHP affinity  j  →", "CHP yakınlığı  j  →"), L + K * c / 2, 11);
+    ctx.save(); ctx.translate(10, Tp + K * c / 2); ctx.rotate(-Math.PI / 2);
+    ctx.fillText(T("←  i  AKP affinity", "←  i  AKP yakınlığı"), 0, 0); ctx.restore();
+    // dots
+    const col = { x: C["camp-x"], y: C["camp-y"], d: C.diag };
+    for (const camp of ["d", "x", "y"]) {
+      ctx.fillStyle = col[camp];
+      for (const d of dots) {
+        if (d.camp !== camp) continue;
+        const t = ease(clamp((p - d.delay) / 0.45, 0, 1));
+        const x = lerp(d.fx, d.tx, t), y = lerp(d.fy, d.ty, t);
+        ctx.fillRect(x - d.size / 2, y - d.size / 2, d.size, d.size);
+      }
+    }
+    if (tint > 0) {
+      ctx.globalAlpha = tint;
+      ctx.font = `700 12px Archivo, system-ui, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      const lab = (txt, i, j, dx, dy) => {
+        const x = L + j * c + c / 2 + dx, y = Tp + i * c + c / 2 + dy;
+        ctx.lineWidth = 4; ctx.strokeStyle = C.sheet; ctx.strokeText(txt, x, y);
+        ctx.fillStyle = C.ink; ctx.fillText(txt, x, y);
+      };
+      lab("311", 0, 10, 0, 0);
+      lab("259", 10, 0, 0, 0);
+      ctx.textAlign = "right";
+      ctx.font = `500 12px ${"IBM Plex Mono"}, monospace`;
+      const sx = L + K * c - 4, sy = Tp + K * c - 12;
+      ctx.lineWidth = 4; ctx.strokeStyle = C.sheet;
+      const s = "S_pol = 0.453";
+      ctx.strokeText(s, sx, sy); ctx.fillStyle = C.ink; ctx.fillText(s, sx, sy);
+      ctx.globalAlpha = 1;
+    }
+  }
+  function frame(now) {
+    prog = (now - t0) / 1000 / 2.2;
+    draw(Math.min(prog, 1.6));
+    if (prog < 1.6) raf = requestAnimationFrame(frame);
+  }
+  function play() {
+    cancelAnimationFrame(raf);
+    if (REDUCED) { prog = 99; draw(1.6); return; }
+    t0 = performance.now(); raf = requestAnimationFrame(frame);
+  }
+  layout();
+  draw(Math.min(prog, 1.6));
+  new ResizeObserver(() => { layout(); draw(Math.min(prog, 1.6)); }).observe(cv);
+  $("#heroReplay").addEventListener("click", play);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw(Math.min(prog, 1.6)));
+  onTheme(() => draw(Math.min(prog, 1.6)));
+  onLang(() => draw(Math.min(prog, 1.6)));
+  return { play };
+}
+
+/* ============================================================
+   Chapters
+   ============================================================ */
+const WP4 = weights(4).W;                                   // toy polarization weights
+const WC4 = weights(4, { type: "consensus" }).W;            // toy consensus weights
+const W10 = weights(10).W, WC10 = weights(10, { type: "consensus" }).W;
+const TOY_LIST = (() => {                                   // the 20 toy respondents, in a fixed shuffled order
+  const out = [];
+  TOY.forEach((r, i) => r.forEach((c, j) => { for (let k = 0; k < c; k++) out.push({ i, j }); }));
+  const R = rng(3);
+  for (let k = out.length - 1; k > 0; k--) { const m = Math.floor(R() * (k + 1)); [out[k], out[m]] = [out[m], out[k]]; }
+  return out.map((o, k) => ({ ...o, id: "R" + String(k + 1).padStart(2, "0") }));
+})();
+const campOf = (i, j) => (i > j ? "x" : i < j ? "y" : "d");
+const SUB = s => `S<sub>${s}</sub>`;
+/* "S*_X" -> S* with a subscript X, inside an SVG <text> */
+function svgSub(el, label) {
+  el.replaceChildren();
+  const m = String(label).match(/^(.*?)_(\w+)(.*)$/);
+  if (!m) { el.textContent = label; return; }
+  el.appendChild(document.createTextNode(m[1]));
+  const t = S("tspan", { "baseline-shift": "sub", "font-size": "0.75em" }, el); t.textContent = m[2];
+  if (m[3]) el.appendChild(document.createTextNode(m[3]));
+}
+
+function RO(host, items) {
+  host.innerHTML = items.map(it =>
+    `<div class="ro${it.hl ? " hl" : ""}"><div class="k">${it.sw ? `<i class="sw ${it.sw}"></i>` : ""}<span>${it.k}</span></div><div class="v">${it.v}</div>${it.s ? `<div class="s">${it.s}</div>` : ""}</div>`
+  ).join("");
+}
+function tokens(host, list) {
+  host.innerHTML = "";
+  return list.map(r => {
+    const e = H("span", { class: "tok" }, `<i>${r.id}</i>${r.i}·${r.j}<span class="cnt"></span>`);
+    host.appendChild(e);
+    return e;
+  });
+}
+function cellTip(i, j, lines, ev) { showTip(`<b>(${i}, ${j})</b><br>${lines.join("<br>")}`, ev); }
+
+/* signed horizontal bars with a zero line */
+function Bars(host, { lo, hi, width = 380, row = 24, labelW = 64, fmt = v => f(v, 4) }) {
+  const svg = S("svg", { class: "chart", role: "img" });
+  host.appendChild(svg);
+  return (rows) => {
+    svg.replaceChildren();
+    const Ht = rows.length * row + 8;
+    svg.setAttribute("viewBox", `0 0 ${width} ${Ht}`);
+    const x = axisLinear(lo, hi, labelW, width - 64);
+    S("line", { x1: x(0), x2: x(0), y1: 0, y2: Ht, class: "axis" }, svg);
+    rows.forEach((r, k) => {
+      const y = k * row + 4;
+      const lab = S("text", { x: labelW - 8, y: y + row / 2, "text-anchor": "end", "dominant-baseline": "central", class: "axt" }, svg);
+      svgSub(lab, r.label);
+      const v = clamp(r.value, lo, hi), x0 = Math.min(x(0), x(v)), x1 = Math.max(x(0), x(v));
+      S("rect", { x: x0, y: y + 3, width: Math.max(0.5, x1 - x0), height: row - 8, rx: 2, fill: r.color, style: "transition: x .4s, width .4s" }, svg);
+      const t = S("text", { x: v >= 0 ? x1 + 6 : x(0) + 6, y: y + row / 2, "dominant-baseline": "central", "text-anchor": "start", "font-size": 11.5 }, svg);
+      t.textContent = r.text ?? fmt(r.value);
+    });
+  };
+}
+
+/* ---------------- 1. The problem ---------------- */
+function chProblem() {
+  const m = [0.37, 0.03, 0.03, 0.04, 0.04, 0.10, 0.05, 0.06, 0.07, 0.04, 0.17];
+  const K = 11, F = [];
+  m.reduce((s, v, k) => (F[k] = s + v), 0);
+  const Fm = k => (k < 0 ? 0 : F[k]);
+  const ind = zeros(K), co = zeros(K), ctr = zeros(K);
+  for (let i = 0; i < K; i++) for (let j = 0; j < K; j++) {
+    ind[i][j] = m[i] * m[j];
+    co[i][j] = i === j ? m[i] : 0;
+    ctr[i][j] = Math.max(0, Math.min(Fm(i), 1 - Fm(j - 1)) - Math.max(Fm(i - 1), 1 - Fm(j)));
+  }
+  const joint = t => ind.map((r, i) => r.map((v, j) => (t >= 0 ? (1 - t) * v + t * co[i][j] : (1 + t) * v - t * ctr[i][j])));
+  const mean = m.reduce((s, v, k) => s + v * k, 0), sdv = Math.sqrt(m.reduce((s, v, k) => s + v * (k - mean) ** 2, 0));
+  const host = $("#probFig");
+  const mx = MatrixView(host, { n: K, cell: 26, left: 78, top: 74, gap: 1, ticks: true, rowTitle: () => T("X rating (i)", "X puanı (i)"), colTitle: () => T("Y rating (j)", "Y puanı (j)"), rowTitleX: 10, colTitleY: 10,
+    onHover: (i, j, ev) => cellTip(i, j, [`p = ${f(100 * cur[i][j], 1)}%`], ev), onMove: (i, j, ev) => cellTip(i, j, [`p = ${f(100 * cur[i][j], 1)}%`], ev) });
+  const gM = S("g", {}, mx.svg);
+  const L = mx.L, Tp = mx.T, c = mx.c;
+  function margins() {
+    gM.replaceChildren();
+    m.forEach((v, k) => {
+      const len = v / 0.37 * 44;
+      S("rect", { x: L - 22 - len, y: Tp + k * c + 4, width: len, height: c - 8, rx: 1.5, fill: C.diag }, gM);
+      S("rect", { x: L + k * c + 4, y: Tp - 18 - len, width: c - 8, height: len, rx: 1.5, fill: C.diag }, gM);
+    });
+  }
+  let cur = joint(0), t = 0;
+  const out = $("#couplingOut"), slider = $("#coupling");
+  function render() {
+    cur = joint(t);
+    mx.set(cur, { fill: v => ramp("mass", Math.sqrt(v / 0.37)) });
+    margins();
+    out.textContent = f(t, 2);
+    const sp = polScores(cur, W10), sc = conScores(cur, WC10);
+    RO($("#probRO"), [
+      { k: T("X: mean · SD", "X: ort. · SS"), v: `${f(mean, 2)} · ${f(sdv, 2)}` },
+      { k: T("Y: mean · SD", "Y: ort. · SS"), v: `${f(mean, 2)} · ${f(sdv, 2)}` },
+      { k: SUB("pol"), v: f(sp.Spol, 3), hl: true },
+      { k: SUB("con"), v: f(sc.Scon, 3) },
+    ]);
+  }
+  function setT(v) { t = clamp(v, -1, 1); slider.value = t; render(); }
+  slider.addEventListener("input", () => { ch.stop(); setT(+slider.value); });
+  async function animateTo(v, ms, ctx) {
+    const a = t; mx.live(true);
+    await tween(ms, e => { if (ctx.alive(ctx.token)) setT(lerp(a, v, e)); });
+    mx.live(false);
+  }
+  const ch = Chapter("problem", [
+    { enter: ctx => { mx.guide(null); animateTo(0, ctx.instant ? 0 : 700, ctx); } },
+    { enter: ctx => { mx.guide("diag"); animateTo(1, 1400, ctx); }, dur: 3600 },
+    { enter: ctx => { mx.guide("anti"); animateTo(-1, 1800, ctx); }, dur: 4400 },
+    { enter: ctx => { mx.guide(null); animateTo(-0.6, 900, ctx); } },
+  ]);
+  onTheme(render); onLang(render);
+  render();
+  ch.go(0, { instant: true });
+}
+
+/* ---------------- 2. Joint table ---------------- */
+function chTable() {
+  const host = $("#tableFig");
+  const toks = tokens($("#toyTokens"), TOY_LIST);
+  let A = zeros(5);
+  const mx = MatrixView(host, { n: 5, cell: 58, left: 36, top: 36, fs: 19, rowTitle: () => T("i · rating of X", "i · X puanı"), colTitle: () => T("j · rating of Y", "j · Y puanı"),
+    onHover: (i, j, ev) => cellTip(i, j, [`a = ${A[i][j]}`], ev), onMove: (i, j, ev) => cellTip(i, j, [`a = ${A[i][j]}`], ev) });
+  let regionMode = null;
+  function render() {
+    mx.set(A, { fill: v => ramp("mass", v / 4.5), text: v => (v ? String(v) : "") });
+    if (regionMode === "pol") {
+      mx.regions([
+        { cells: (i, j) => i > j, color: C["camp-x"] },
+        { cells: (i, j) => i < j, color: C["camp-y"] },
+      ]);
+      mx.guide("diag");
+      RO($("#tableRO"), [
+        { k: T("X-leaning n<sub>X</sub>", "X'e yakın n<sub>X</sub>"), v: "6", sw: "x" },
+        { k: T("diagonal", "köşegen"), v: "7", sw: "d" },
+        { k: T("Y-leaning n<sub>Y</sub>", "Y'ye yakın n<sub>Y</sub>"), v: "7", sw: "y" },
+      ]);
+    } else if (regionMode === "con") {
+      mx.regions([
+        { cells: (i, j) => i + j < 4, color: C["neg-2"] },
+        { cells: (i, j) => i + j > 4, color: C["pos-2"] },
+      ]);
+      mx.guide("anti");
+      RO($("#tableRO"), [
+        { k: "i + j < N", v: "8", sw: "neg" },
+        { k: T("anti-diagonal", "ters köşegen"), v: "11", sw: "d" },
+        { k: "i + j > N", v: "1", sw: "pos" },
+      ]);
+    } else {
+      mx.regions([]); mx.guide(null);
+      RO($("#tableRO"), [{ k: "s<sub>0</sub>", v: "0" }, { k: "N", v: "4" }, { k: "n", v: String(total(A)) + " / 20", hl: true }]);
+    }
+    toks.forEach((e, k) => {
+      const r = TOY_LIST[k];
+      e.className = "tok" + (regionMode === "pol" ? " " + campOf(r.i, r.j) : "");
+      if (regionMode === "con") e.className = "tok " + (r.i + r.j < 4 ? "x" : r.i + r.j > 4 ? "y" : "d");
+    });
+  }
+  async function tally(ctx) {
+    A = zeros(5); regionMode = null; render();
+    toks.forEach(e => e.classList.add("gone"));
+    if (REDUCED || ctx.instant) { A = TOY.map(r => r.slice()); toks.forEach(e => e.classList.remove("gone")); render(); return; }
+    toks.forEach(e => e.classList.remove("gone"));
+    for (let k = 0; k < TOY_LIST.length; k++) {
+      if (!ctx.alive(ctx.token)) return;
+      const r = TOY_LIST[k], e = toks[k], a = e.getBoundingClientRect(), b = mx.cells[r.i][r.j].r.getBoundingClientRect();
+      const fly = e.cloneNode(true);
+      Object.assign(fly.style, { position: "fixed", left: a.left + "px", top: a.top + "px", margin: 0, zIndex: 30, pointerEvents: "none", background: C.sheet });
+      document.body.appendChild(fly);
+      e.classList.add("gone");
+      const dx = b.left + b.width / 2 - (a.left + a.width / 2), dy = b.top + b.height / 2 - (a.top + a.height / 2);
+      fly.animate([{ transform: "translate(0,0)", opacity: 1 }, { transform: `translate(${dx}px,${dy}px) scale(.5)`, opacity: 0.3 }], { duration: 520, easing: "cubic-bezier(.3,.7,.3,1)" })
+        .finished.then(() => { fly.remove(); if (!ctx.alive(ctx.token)) return; A[r.i][r.j]++; e.classList.remove("gone"); render(); });
+      await sleep(110);
+    }
+  }
+  Chapter("table", [
+    { enter: ctx => { A = zeros(5); regionMode = null; toks.forEach(e => e.classList.remove("gone")); render(); } },
+    { enter: ctx => tally(ctx), dur: 4600 },
+    { enter: () => { A = TOY.map(r => r.slice()); regionMode = "pol"; render(); } },
+    { enter: () => { A = TOY.map(r => r.slice()); regionMode = "con"; render(); } },
+  ]).go(0, { instant: true });
+  onTheme(render); onLang(render);
+}
+
+/* ---------------- 3. Weights ---------------- */
+function chWeights() {
+  let geom = "pol", N = 4, sel = [1, 3], focus = 3, trio = [];
+  const host = $("#wTrio");
+  function terms(i, j) {
+    if (geom === "pol") return { d: Math.abs(i - j) / N, a: 1 - Math.abs(i + j - N) / N };
+    return { d: (i + j) / N - 1, a: (N - Math.abs(i - j)) / N };
+  }
+  function build() {
+    host.replaceChildren(); trio = [];
+    const caps = N === 4 ? ["d × 4", "a × 4", "m × 16"] : ["d", "a", "m = d · a"];
+    caps.forEach((cap, k) => {
+      const wrap = H("div", { class: "blk" });
+      wrap.appendChild(H("div", { class: "cap" }, cap));
+      const box = H("div"); wrap.appendChild(box);
+      host.appendChild(wrap);
+      if (k < 2) host.appendChild(H("div", { class: "op" }, k === 0 ? "×" : "="));
+      const v = MatrixView(box, { n: N + 1, cell: N === 4 ? 34 : 16, left: N === 4 ? 16 : 16, top: N === 4 ? 16 : 16, fs: 13, gap: N === 4 ? 1.5 : 1,
+        ticks: N === 4,
+        onHover: (i, j) => { sel = [i, j]; inspect(); ping(); },
+        onClick: (i, j) => { sel = [i, j]; inspect(); ping(); } });
+      trio.push({ wrap, v });
+    });
+  }
+  function ping() {
+    const list = focus === 2 && N === 10 ? [[0, 5], [3, 8], [5, 10]] : [sel];
+    trio.forEach(t => t.v.ping(list));
+  }
+  function render() {
+    const n = N + 1;
+    const D = [], Aa = [], M = [];
+    for (let i = 0; i < n; i++) { D.push([]); Aa.push([]); M.push([]); for (let j = 0; j < n; j++) { const t = terms(i, j); D[i].push(t.d); Aa[i].push(t.a); M[i].push(t.d * t.a); } }
+    const dFill = v => (geom === "pol" ? ramp("pos", v) : div(v));
+    const txt = scale => (N === 4 ? v => String(Math.round(v * scale)).replace("-", MINUS) : null);
+    trio[0].v.set(D, { fill: dFill, text: txt(4) });
+    trio[1].v.set(Aa, { fill: v => ramp("mass", v * 0.8), text: txt(4) });
+    trio[2].v.set(M, { fill: dFill, text: txt(16) });
+    trio.forEach((t, k) => { t.wrap.style.opacity = focus === 0 && k > 0 ? 0.3 : focus === 1 && k === 2 ? 0.3 : 1; t.wrap.style.transition = "opacity .3s"; });
+    trio.forEach(t => t.v.guide(geom === "pol" ? "anti" : "diag"));
+    $("#wCap").innerHTML = geom === "pol"
+      ? T(`Colour: <i class="sw pos"></i> 0 → 1. Dashed line: the anti-diagonal i + j = N, where agreement is 1. ${N === 4 ? "Numbers are whole multiples: d and a in quarters, m in sixteenths." : "Hover a cell to see its terms."}`,
+          `Renk: <i class="sw pos"></i> 0 → 1. Kesikli çizgi: uyumun 1 olduğu ters köşegen i + j = N. ${N === 4 ? "Sayılar tam katlardır: d ve a dörtte bir, m on altıda bir birimindedir." : "Terimleri görmek için bir hücrenin üzerine gelin."}`)
+      : T(`Colour: <i class="sw neg"></i> −1 → 0 → +1 <i class="sw pos"></i>. Dashed line: the main diagonal, where agreement is 1.`,
+          `Renk: <i class="sw neg"></i> −1 → 0 → +1 <i class="sw pos"></i>. Kesikli çizgi: uyumun 1 olduğu ana köşegen.`);
+    inspect(); ping();
+  }
+  function inspect() {
+    const box = $("#wInspect");
+    if (focus === 2 && N === 10 && geom === "pol") {
+      const rows = [[0, 5], [3, 8], [5, 10]].map(([i, j]) => { const t = terms(i, j); return `(${i},${j})&:\\ d=${f(t.d, 2)},\\ a=${f(t.a, 2)},\\ m=${f(t.d * t.a, 2)}`; });
+      box.innerHTML = `<div class="hd">${T("Five points apart, three different weights", "Beş puan aralık, üç farklı ağırlık")}</div><div class="m"></div>`;
+      tex(box.querySelector(".m"), `\\begin{aligned}${rows.join("\\\\")}\\end{aligned}`, true);
+      return;
+    }
+    const [i, j] = sel, t = terms(i, j);
+    const ex = [];
+    if (geom === "pol") {
+      ex.push(`d_{${i},${j}}=\\frac{|${i}-${j}|}{${N}}=${trim(t.d)}`);
+      if (focus >= 1) ex.push(`a_{${i},${j}}=1-\\frac{|${i}+${j}-${N}|}{${N}}=${trim(t.a)}`);
+    } else {
+      ex.push(`d_{${i},${j}}=\\frac{${i}+${j}}{${N}}-1=${trim(t.d)}`);
+      ex.push(`a_{${i},${j}}=\\frac{${N}-|${i}-${j}|}{${N}}=${trim(t.a)}`);
+    }
+    if (focus >= 2 || geom === "con") ex.push(`m_{${i},${j}}=${trim(t.d)}\\times${trim(t.a)}=${trim(t.d * t.a)}`);
+    box.innerHTML = `<div class="hd">${T("Selected cell — hover or tap any cell", "Seçili hücre — herhangi bir hücrenin üzerine gelin ya da dokunun")}</div><div class="m"></div>`;
+    tex(box.querySelector(".m"), ex.join("\\qquad "), false);
+  }
+  const trim = v => { const s = f(v, 4); return s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s; };
+  function setSeg(id, v) { $$(`#${id} button`).forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === String(v)))); }
+  function setState(g, n) {
+    const rebuild = n !== N;
+    geom = g; N = n; setSeg("wGeom", g); setSeg("wN", n);
+    if (sel[0] > N || sel[1] > N) sel = [1, 3];
+    if (rebuild) build();
+    render();
+  }
+  $$("#wGeom button").forEach(b => b.addEventListener("click", () => { ch.stop(); setState(b.dataset.v, N); }));
+  $$("#wN button").forEach(b => b.addEventListener("click", () => { ch.stop(); setState(geom, +b.dataset.v); }));
+  build();
+  const ch = Chapter("weights", [
+    { enter: () => { focus = 0; sel = [0, 4]; setState("pol", 4); } },
+    { enter: () => { focus = 1; sel = [1, 3]; setState("pol", 4); } },
+    { enter: () => { focus = 2; sel = [3, 8]; setState("pol", 10); }, dur: 5200 },
+    { enter: () => { focus = 3; sel = [0, 0]; setState("con", 4); } },
+  ]);
+  ch.go(0, { instant: true });
+  onTheme(render); onLang(render);
+}
+
+/* ---------------- 4. Kernels ---------------- */
+function chKernels() {
+  const st = { kernel: "power", p: 1, sigma: 0.5, q: 1 };
+  const mxHost = $("#kMatrix");
+  let Wcur = W10, Mcur = W10;
+  const mx = MatrixView(mxHost, { n: 11, cell: 22, left: 22, top: 22, gap: 1, fs: 8,
+    onHover: (i, j, ev) => cellTip(i, j, [`m = ${f(Mcur[i][j], 4)}`, `w = ${f(Wcur[i][j], 4)}`], ev),
+    onMove: (i, j, ev) => cellTip(i, j, [`m = ${f(Mcur[i][j], 4)}`, `w = ${f(Wcur[i][j], 4)}`], ev) });
+  const cv = S("svg", { viewBox: "0 0 320 252", class: "chart", role: "img", "aria-label": "kernel curve" });
+  $("#kCurve").appendChild(cv);
+  const X = axisLinear(0, 1, 40, 306), Y = axisLinear(0, 1, 196, 14);
+  const fd = d => (st.kernel === "power" ? Math.pow(d, st.p) : 1 - Math.exp(-(d * d) / (2 * st.sigma * st.sigma)));
+  function drawCurve(maxv) {
+    cv.replaceChildren();
+    [0, 0.25, 0.5, 0.75, 1].forEach(v => {
+      S("line", { x1: X(0), x2: X(1), y1: Y(v), y2: Y(v), class: "gridline" }, cv);
+      S("text", { x: X(0) - 6, y: Y(v), class: "tick", "text-anchor": "end", "dominant-baseline": "central" }, cv).textContent = v;
+      S("text", { x: X(v), y: Y(0) + 14, class: "tick", "text-anchor": "middle" }, cv).textContent = v;
+    });
+    S("text", { x: X(0.5), y: 226, class: "axt", "text-anchor": "middle" }, cv).textContent = T("distance d", "uzaklık d");
+    S("text", { x: 10, y: Y(0.5), class: "axt", "text-anchor": "middle", transform: `rotate(-90 10 ${Y(0.5)})` }, cv).textContent = T("weight", "ağırlık");
+    let raw = "", norm = "";
+    for (let k = 0; k <= 100; k++) {
+      const d = k / 100, v = fd(d);
+      raw += (k ? "L" : "M") + X(d).toFixed(1) + " " + Y(v).toFixed(1);
+      norm += (k ? "L" : "M") + X(d).toFixed(1) + " " + Y(v / maxv).toFixed(1);
+    }
+    if (st.kernel === "gaussian" && st.sigma <= 1) {
+      S("line", { x1: X(st.sigma), x2: X(st.sigma), y1: Y(0), y2: Y(1), stroke: C.muted, "stroke-dasharray": "2 3" }, cv);
+      S("text", { x: X(st.sigma) + 4, y: Y(0.96), "font-size": 11, fill: C.muted }, cv).textContent = "σ";
+    }
+    S("line", { x1: 40, x2: 58, y1: 244, y2: 244, stroke: C["pos-2"], "stroke-width": 2.2 }, cv);
+    S("text", { x: 62, y: 244, "font-size": 10.5, fill: C["ink-2"], "dominant-baseline": "central" }, cv).textContent = T("normalised", "normalize");
+    if (Math.abs(maxv - 1) > 1e-4) {
+      S("path", { d: raw, fill: "none", stroke: C.muted, "stroke-width": 1.5, "stroke-dasharray": "5 4" }, cv);
+      S("line", { x1: 150, x2: 168, y1: 244, y2: 244, stroke: C.muted, "stroke-width": 1.5, "stroke-dasharray": "5 4" }, cv);
+      S("text", { x: 172, y: 244, "font-size": 10.5, fill: C["ink-2"], "dominant-baseline": "central" }, cv).textContent = T("raw", "ham") + `, max ${f(maxv, 4)}`;
+    }
+    S("path", { d: norm, fill: "none", stroke: C["pos-2"], "stroke-width": 2.2 }, cv);
+    for (let k = 0; k <= 10; k++) S("circle", { cx: X(k / 10), cy: Y(fd(k / 10) / maxv), r: 3, fill: C["pos-2"], stroke: C.sheet, "stroke-width": 1.5 }, cv);
+  }
+  function render() {
+    const opts = { kernel: st.kernel, p: st.p, q: st.q, sigma: st.sigma };
+    const res = weights(10, opts);
+    Wcur = res.W; Mcur = res.M;
+    mx.set(Wcur, { fill: v => ramp("pos", v) });
+    mx.guide("anti");
+    drawCurve(fd(1));
+    $("#kPout").textContent = f(st.p, 2); $("#kSout").textContent = f(st.sigma, 2); $("#kQout").textContent = f(st.q, 2);
+    $("#kPctl").hidden = st.kernel !== "power"; $("#kSctl").hidden = st.kernel !== "gaussian";
+    $$("#kKernel button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === st.kernel)));
+    const sp = polScores(SIM, Wcur).Spol;
+    const match = T6.find(r => r[2].kernel === st.kernel && Math.abs((r[2].q) - st.q) < 1e-9 &&
+      (st.kernel === "power" ? Math.abs(r[2].p - st.p) < 1e-9 : Math.abs(r[2].sigma - st.sigma) < 1e-9));
+    $$("#kPresets .chip").forEach((b, k) => b.setAttribute("aria-pressed", String(T6[k] === match)));
+    RO($("#kRO"), [
+      { k: T("largest raw |m|", "en büyük ham |m|"), v: f(res.max, 4) },
+      { k: T("rescaling", "yeniden ölçek"), v: `÷ ${f(res.max, 4)}` },
+      { k: T("S<sub>pol</sub>, simulated AKP×CHP", "S<sub>pol</sub>, simüle AKP×CHP"), v: f(sp, 3), hl: true },
+      { k: T("published (Table 6)", "yayımlanan (Tablo 6)"), v: match ? f(match[4], 3) : "–", s: match ? `[${f(match[5], 3)}, ${f(match[6], 3)}]` : T("pick a preset", "bir hazır tanım seçin") },
+    ]);
+  }
+  const P = $("#kP"), Sg = $("#kS"), Q = $("#kQ");
+  P.addEventListener("input", () => { ch.stop(); st.p = +P.value; render(); });
+  Sg.addEventListener("input", () => { ch.stop(); st.sigma = +Sg.value; render(); });
+  Q.addEventListener("input", () => { ch.stop(); st.q = +Q.value; render(); });
+  $$("#kKernel button").forEach(b => b.addEventListener("click", () => { ch.stop(); st.kernel = b.dataset.v; render(); }));
+  const presets = $("#kPresets");
+  T6.forEach(r => {
+    const b = H("button", { type: "button", class: "chip", "aria-pressed": "false" });
+    const lab = () => { b.textContent = (LANG === "tr" ? r[1] : r[0]).replace(" (default)", " ★").replace(" (varsayılan)", " ★"); };
+    lab(); onLang(lab);
+    b.addEventListener("click", () => { ch.stop(); apply(r[2]); });
+    presets.appendChild(b);
+  });
+  function apply(o) {
+    st.kernel = o.kernel; st.q = o.q;
+    if (o.p != null) st.p = o.p;
+    if (o.sigma != null) st.sigma = o.sigma;
+    P.value = st.p; Sg.value = st.sigma; Q.value = st.q; render();
+  }
+  async function sweep(key, el, seq, ms, ctx) {
+    mx.live(true);
+    for (const v of seq) {
+      const a = st[key];
+      await tween(ms, e => { if (!ctx.alive(ctx.token)) return; st[key] = lerp(a, v, e); el.value = st[key]; render(); });
+      if (!ctx.alive(ctx.token)) break;
+    }
+    mx.live(false);
+  }
+  const ch = Chapter("kernels", [
+    { enter: ctx => { apply({ kernel: "power", p: 1, q: 1 }); if (!ctx.instant) sweep("p", P, [0.5, 2.5, 1], 1100, ctx); }, dur: 4400 },
+    { enter: ctx => { apply({ kernel: "power", p: 1, q: 1 }); sweep("q", Q, [0, 3, 1], 1100, ctx); }, dur: 4400 },
+    { enter: ctx => { apply({ kernel: "gaussian", sigma: 0.25, q: 1 }); sweep("sigma", Sg, [1, 0.5], 1300, ctx); }, dur: 4000 },
+    { enter: () => apply({ kernel: "gaussian", sigma: 1, q: 1 }) },
+  ]);
+  ch.go(0, { instant: true });
+  onTheme(render); onLang(render);
+}
+
+/* ---------------- 5. Probabilities ---------------- */
+function chProb() {
+  let mode = "global", showCounts = false, regions = false;
+  const tri = { x: 6, y: 7, d: 7 };
+  const val = (i, j) => {
+    const a = TOY[i][j];
+    if (mode === "global") return a / 20;
+    return a / tri[campOf(i, j)];
+  };
+  const mx = MatrixView($("#probMx"), { n: 5, cell: 62, left: 36, top: 36, fs: 15, rowTitle: () => T("i · rating of X", "i · X puanı"), colTitle: () => T("j · rating of Y", "j · Y puanı"),
+    onHover: (i, j, ev) => cellTip(i, j, [`a = ${TOY[i][j]}`, `p = ${f(val(i, j), 4)}`], ev), onMove: (i, j, ev) => cellTip(i, j, [`a = ${TOY[i][j]}`, `p = ${f(val(i, j), 4)}`], ev) });
+  const barSvg = S("svg", { viewBox: "0 0 400 112", class: "chart", role: "img" });
+  $("#probBar").appendChild(barSvg);
+  function bar() {
+    barSvg.replaceChildren();
+    const segs = [["x", 30, T("X-leaning", "X'e yakın")], ["d", 35, T("diagonal", "köşegen")], ["y", 35, T("Y-leaning", "Y'ye yakın")]];
+    const col = { x: C["camp-x"], y: C["camp-y"], d: C.diag };
+    if (mode === "global") {
+      let x0 = 0;
+      segs.forEach(([k, pct, lab]) => {
+        const w = pct / 100 * 396;
+        S("rect", { x: x0 + 2, y: 30, width: w - 2, height: 26, rx: 2, fill: col[k] }, barSvg);
+        S("text", { x: x0 + 4, y: 20, class: "axt" }, barSvg).textContent = `${lab} ${pct}%`;
+        x0 += w;
+      });
+      const s = polScores(TOY, WP4);
+      S("text", { x: 2, y: 84, "font-size": 12 }, barSvg).textContent = `S_X = ${f(s.SX, 4)}    S_Y = ${f(s.SY, 4)}`;
+      S("text", { x: 2, y: 102, "font-size": 11, fill: C.muted }, barSvg).textContent = T("each camp's score includes its share of the sample", "her kampın skoru örneklemdeki payını içerir");
+    } else {
+      segs.forEach(([k, pct, lab], r) => {
+        S("rect", { x: 92, y: 4 + r * 22, width: 300, height: 16, rx: 2, fill: col[k] }, barSvg);
+        S("text", { x: 86, y: 12 + r * 22, class: "axt", "text-anchor": "end", "dominant-baseline": "central" }, barSvg).textContent = `${lab} 100%`;
+      });
+      const sx = 69 / 16 / 6, sy = 85 / 16 / 7;
+      S("text", { x: 2, y: 86, "font-size": 12 }, barSvg).textContent = `S_X = ${f(sx, 4)}    S_Y = ${f(sy, 4)}`;
+      S("text", { x: 2, y: 104, "font-size": 11, fill: C.muted }, barSvg).textContent = T("= 100 × the per-person scores of chapter 7: size is gone", "= 7. bölümdeki kişi başı skorların 100 katı: büyüklük kayboldu");
+    }
+    $("#pBarTitle").textContent = mode === "global" ? T("Share of the sample in each region (sums to 100%)", "Her bölgenin örneklem payı (toplam %100)") : T("Each region divided by its own total (each sums to 1)", "Her bölge kendi toplamına bölündü (her biri 1'e toplanır)");
+  }
+  function render() {
+    const V = TOY.map((r, i) => r.map((_, j) => (showCounts ? TOY[i][j] : val(i, j))));
+    mx.set(V, { fill: (v, i, j) => ramp("mass", (showCounts ? v / 20 : val(i, j)) / 0.22), text: (v, i, j) => (TOY[i][j] ? (showCounts ? String(v) : fc(v, mode === "global" ? 2 : 3)) : "") });
+    mx.regions(regions ? [
+      { cells: (i, j) => i > j, color: C["camp-x"] },
+      { cells: (i, j) => i < j, color: C["camp-y"] },
+      { cells: (i, j) => i === j, color: C.diag },
+    ] : []);
+    $$("#pMode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === mode)));
+    bar();
+  }
+  $$("#pMode button").forEach(b => b.addEventListener("click", () => { ch.stop(); mode = b.dataset.v; showCounts = false; regions = true; render(); }));
+  const ch = Chapter("prob", [
+    { enter: async ctx => { mode = "global"; regions = false; showCounts = !ctx.instant; render(); if (ctx.instant) return; await sleep(900); if (ctx.alive(ctx.token)) { showCounts = false; render(); } } },
+    { enter: () => { mode = "global"; showCounts = false; regions = true; render(); } },
+    { enter: () => { mode = "tri"; showCounts = false; regions = true; render(); } },
+  ]);
+  ch.go(0, { instant: true });
+  onTheme(render); onLang(render);
+}
+
+/* ---------------- 6 & 8. Score trio (W o P = WP) ---------------- */
+function ScoreTrio(prefix, type) {
+  const W = type === "pol" ? WP4 : WC4;
+  const w16 = W.map(r => r.map(v => Math.round(v * 16)));
+  const wp = w16.map((r, i) => r.map((v, j) => v * TOY[i][j]));
+  const host = $(`#${prefix}Trio`), sumEl = $(`#${prefix}Sum`);
+  const views = [];
+  const caps = [["W × 16", "W × 16"], ["P × 20", "P × 20"], ["WP × 320", "WP × 320"]];
+  caps.forEach((cap, k) => {
+    const wrap = H("div");
+    wrap.appendChild(H("div", { class: "cap" }, cap[0]));
+    const box = H("div"); wrap.appendChild(box);
+    host.appendChild(wrap);
+    if (k < 2) host.appendChild(H("div", { class: "op" }, k === 0 ? "∘" : "="));
+    views.push(MatrixView(box, { n: 5, cell: 30, left: 16, top: 16, fs: 11.5, gap: 1.5,
+      onHover: (i, j, ev) => tipFor(i, j, ev), onMove: (i, j, ev) => tipFor(i, j, ev) }));
+  });
+  function tipFor(i, j, ev) {
+    cellTip(i, j, [`w = ${w16[i][j]}/16 = ${f(W[i][j], 4)}`, `p = ${TOY[i][j]}/20 = ${f(TOY[i][j] / 20, 2)}`, `WP = ${wp[i][j]}/320 = ${f(wp[i][j] / 320, 6)}`], ev);
+  }
+  const wFill = v => (type === "pol" ? ramp("pos", v / 16) : div(v / 16));
+  const wpFill = v => (type === "pol" ? ramp("pos", v / 64) : div(v / 48));
+  const signed = v => String(v).replace("-", MINUS);
+  let keep = null, pinged = [];
+  function render() {
+    views[0].set(w16, { fill: wFill, text: signed });
+    views[1].set(TOY, { fill: v => ramp("mass", v / 4.5), text: v => (v ? String(v) : "") });
+    views[2].set(wp, { fill: (v, i, j) => (TOY[i][j] ? wpFill(v) : C.mid), text: (v, i, j) => (TOY[i][j] ? signed(v) : "") });
+    views.forEach(v => { v.dim(keep); v.ping(pinged); v.guide(type === "pol" ? "diag" : "anti"); });
+  }
+  const api = {
+    views, wp, w16, render,
+    focus(fn) { keep = fn; render(); },
+    ping(list) { pinged = list; views.forEach(v => v.ping(list)); },
+    sum(html) { sumEl.innerHTML = html; },
+  };
+  onTheme(render);
+  render();
+  return api;
+}
+async function buildSum(trio, region, cls, label, ctx) {
+  const cells = [];
+  for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) if (region(i, j) && TOY[i][j]) cells.push([i, j]);
+  const terms = [];
+  const total320 = cells.reduce((s, [i, j]) => s + trio.wp[i][j], 0);
+  const neg = v => String(v).replace("-", MINUS);
+  const head = `${label} = (`;
+  const end = () => `) / 320 = <b>${neg(total320)}/320</b> = <b>${f(total320 / 320, 6)}</b>`;
+  if (ctx.instant || REDUCED) {
+    trio.sum(head + cells.map(([i, j]) => `<span class="${cls}">${neg(trio.w16[i][j])}×${TOY[i][j]}</span>`).join(" + ") + end());
+    trio.ping([]); return;
+  }
+  for (const [i, j] of cells) {
+    if (!ctx.alive(ctx.token)) return;
+    terms.push(`<span class="${cls}">${neg(trio.w16[i][j])}×${TOY[i][j]}</span>`);
+    trio.ping([[i, j]]);
+    trio.sum(head + terms.join(" + ") + " …");
+    await sleep(650);
+  }
+  if (!ctx.alive(ctx.token)) return;
+  trio.ping([]);
+  trio.sum(head + terms.join(" + ") + end());
+}
+function chScores() {
+  const trio = ScoreTrio("s", "pol");
+  const bars = Bars($("#sBars"), { lo: 0, hi: 0.5 });
+  let show = 0;
+  function drawBars() {
+    const s = polScores(TOY, WP4);
+    bars([
+      { label: "S_X", value: show >= 1 ? s.SX : 0, color: C["camp-x"], text: show >= 1 ? f(s.SX, 6) : "" },
+      { label: "S_Y", value: show >= 2 ? s.SY : 0, color: C["camp-y"], text: show >= 2 ? f(s.SY, 6) : "" },
+      { label: "S_pol", value: show >= 3 ? s.Spol : 0, color: C["ink-2"], text: show >= 3 ? f(s.Spol, 5) : "" },
+    ]);
+  }
+  Chapter("scores", [
+    { enter: () => { show = 0; trio.focus(null); trio.ping([[0, 4]]); trio.sum(`WP<sub>0,4</sub> = w × p = 16/16 × 4/20 = <b>64/320</b> = <b>0.20</b>`); drawBars(); } },
+    { enter: async ctx => { show = 0; drawBars(); trio.focus((i, j) => i > j); await buildSum(trio, (i, j) => i > j, "tx", "S_X", ctx); if (ctx.alive(ctx.token)) { show = 1; drawBars(); } }, dur: 4800 },
+    { enter: async ctx => { show = 1; drawBars(); trio.focus((i, j) => i < j); await buildSum(trio, (i, j) => i < j, "ty", "S_Y", ctx); if (ctx.alive(ctx.token)) { show = 2; drawBars(); } }, dur: 4800 },
+    { enter: () => { show = 3; trio.focus((i, j) => i !== j); trio.ping([]); trio.sum(`S_pol = S_X + S_Y = <span class="tx">69</span>/320 + <span class="ty">85</span>/320 = <b>154/320</b> = <b>0.48125</b>`); drawBars(); } },
+  ]).go(0, { instant: true });
+  onTheme(drawBars);
+}
+function chConsensus() {
+  const trio = ScoreTrio("c", "con");
+  const bars = Bars($("#cBars"), { lo: -0.25, hi: 0.1, labelW: 70 });
+  let show = 0;
+  function drawBars() {
+    const s = conScores(TOY, WC4);
+    bars([
+      { label: "S_neg", value: show >= 1 ? s.Sneg : 0, color: C["neg-2"], text: show >= 1 ? f(s.Sneg, 5) : "" },
+      { label: "S_pos", value: show >= 2 ? s.Spos : 0, color: C["pos-2"], text: show >= 2 ? f(s.Spos, 2) : "" },
+      { label: "S_con", value: show >= 3 ? s.Scon : 0, color: C["ink-2"], text: show >= 3 ? f(s.Scon, 5) : "" },
+    ]);
+  }
+  Chapter("consensus", [
+    { enter: () => { show = 0; trio.focus(null); trio.ping([]); trio.sum(T("Anti-diagonal cells (i + j = 4) carry weight 0: 11 respondents contribute nothing.", "Ters köşegen hücreleri (i + j = 4) 0 ağırlık taşır: 11 katılımcı hiçbir katkı yapmaz.")); drawBars(); } },
+    { enter: async ctx => { show = 0; drawBars(); trio.focus((i, j) => i + j < 4); await buildSum(trio, (i, j) => i + j < 4, "tx", "S_neg", ctx); if (ctx.alive(ctx.token)) { show = 1; drawBars(); } }, dur: 5200 },
+    { enter: async ctx => { show = 1; drawBars(); trio.focus((i, j) => i + j > 4); await buildSum(trio, (i, j) => i + j > 4, "ty", "S_pos", ctx); if (ctx.alive(ctx.token)) { show = 2; drawBars(); } } },
+    { enter: () => { show = 3; trio.focus(null); trio.ping([]); trio.sum(`S_con = S_neg + S_pos = ${MINUS}66/320 + 16/320 = <b>${MINUS}50/320</b> = <b>${MINUS}0.15625</b>`); drawBars(); } },
+  ]).go(0, { instant: true });
+  onTheme(drawBars);
+}
+
+/* ---------------- 7. Per person ---------------- */
+function chSize() {
+  const slider = $("#grow");
+  slider.min = 1; slider.max = 8; slider.value = 1;
+  let k = 1, view = "sim";
+  const dotsHost = $("#sizeDots");
+  const dsvg = S("svg", { class: "chart", role: "img", "aria-label": "respondent dots" });
+  dotsHost.appendChild(dsvg);
+  const raw = Bars($("#sizeRaw"), { lo: 0, hi: 0.65, width: 300, labelW: 40, fmt: v => f(v, 3) });
+  const per = Bars($("#sizePer"), { lo: 0, hi: 9, width: 300, labelW: 40, fmt: v => f(v, 2) });
+  const paperSvg = S("svg", { class: "chart", role: "img", viewBox: "0 0 420 150" });
+  function drawDots() {
+    dsvg.replaceChildren();
+    const groups = [["x", 6], ["d", 7], ["y", 7 * k]];
+    const col = { x: C["camp-x"], y: C["camp-y"], d: C.diag };
+    const per = 28, sp = 14.5;
+    let idx = 0;
+    groups.forEach(([g, cnt]) => { for (let q = 0; q < cnt; q++, idx++) {
+      const r = Math.floor(idx / per), cIdx = idx % per;
+      S("circle", { cx: 8 + cIdx * sp, cy: 8 + r * sp, r: 5, fill: col[g] }, dsvg);
+    } });
+    const rows = Math.ceil(idx / per);
+    dsvg.setAttribute("viewBox", `0 0 ${8 + per * sp} ${Math.max(3, rows) * sp + 4}`);
+  }
+  function render() {
+    $("#growOut").textContent = "×" + k;
+    if (view === "paper") {
+      dotsHost.replaceChildren(paperSvg); drawPaper();
+      $("#sizeRaw").parentElement.parentElement.hidden = true;
+    } else {
+      if (!dotsHost.contains(dsvg)) dotsHost.replaceChildren(dsvg);
+      $("#sizeRaw").parentElement.parentElement.hidden = false;
+      drawDots();
+    }
+    const A = TOY.map((r, i) => r.map((v, j) => (i < j ? v * k : v)));
+    const s = polScores(A, WP4);
+    raw([{ label: "S_X", value: s.SX, color: C["camp-x"] }, { label: "S_Y", value: s.SY, color: C["camp-y"] }]);
+    per([{ label: "S*_X", value: s.sX * 1e3, color: C["camp-x"] }, { label: "S*_Y", value: s.sY * 1e3, color: C["camp-y"] }]);
+    $("#sizeCap").innerHTML = view === "paper"
+      ? T("Published bootstrap intervals for the AKP × CHP pair (B = 2,000). Each row has its own scale; the dashed line marks zero.", "AKP × CHP çifti için yayımlanan bootstrap aralıkları (B = 2.000). Her satırın kendi ölçeği var; kesikli çizgi sıfırı gösterir.")
+      : `n = ${s.n} · π<sub>X</sub> = ${f(s.piX, 1)} · π<sub>Y</sub> = ${f(s.piY, 1)} · ` + T(`Y-leaning respondents: ${7 * k}`, `Y'ye yakın katılımcı: ${7 * k}`);
+  }
+  function drawPaper() {
+    paperSvg.replaceChildren();
+    const rowsP = [
+      { lab: "S_X − S_Y", est: -0.053, lo: -0.078, hi: -0.028, d0: -0.1, d1: 0.02, fmt: v => f(v, 3) },
+      { lab: "Δ* × 10³", est: 0.02, lo: -0.29, hi: 0.35, d0: -0.6, d1: 0.6, fmt: v => f(v, 2) },
+    ];
+    rowsP.forEach((r, k2) => {
+      const y = 24 + k2 * 66, x = axisLinear(r.d0, r.d1, 110, 400);
+      S("text", { x: 100, y, class: "axt", "text-anchor": "end", "dominant-baseline": "central" }, paperSvg).textContent = r.lab;
+      S("line", { x1: 110, x2: 400, y1: y + 20, y2: y + 20, class: "axis" }, paperSvg);
+      niceTicks(r.d0, r.d1, 4).forEach(tv => { S("text", { x: x(tv), y: y + 33, class: "tick", "text-anchor": "middle" }, paperSvg).textContent = f(tv, Math.abs(r.d1) < 0.1 ? 2 : 1); });
+      S("line", { x1: x(0), x2: x(0), y1: y - 14, y2: y + 20, stroke: C.ink, "stroke-dasharray": "3 3" }, paperSvg);
+      S("line", { x1: x(r.lo), x2: x(r.hi), y1: y, y2: y, stroke: C["ink-2"], "stroke-width": 2.5 }, paperSvg);
+      [r.lo, r.hi].forEach(v => S("line", { x1: x(v), x2: x(v), y1: y - 6, y2: y + 6, stroke: C["ink-2"], "stroke-width": 2 }, paperSvg));
+      S("circle", { cx: x(r.est), cy: y, r: 5.5, fill: C.ink, stroke: C.sheet, "stroke-width": 2 }, paperSvg);
+      const excl = r.lo > 0 || r.hi < 0;
+      S("text", { x: x(r.hi) + 8, y: y - 10, "font-size": 11, fill: C["ink-2"] }, paperSvg).textContent = excl ? T("excludes 0", "0'ı dışlar") : T("contains 0", "0'ı içerir");
+    });
+  }
+  slider.addEventListener("input", () => { ch.stop(); view = "sim"; k = +slider.value; render(); });
+  async function grow(ctx) {
+    view = "sim";
+    for (let v = 1; v <= 8; v++) {
+      if (!ctx.alive(ctx.token)) return;
+      k = v; slider.value = v; render();
+      await sleep(REDUCED ? 0 : 420);
+    }
+  }
+  const ch = Chapter("size", [
+    { enter: () => { view = "sim"; k = 1; slider.value = 1; render(); } },
+    { enter: () => { view = "sim"; k = 1; slider.value = 1; render(); } },
+    { enter: () => { view = "sim"; render(); } },
+    { enter: ctx => grow(ctx), dur: 5200 },
+    { enter: () => { view = "paper"; render(); } },
+  ]);
+  ch.go(0, { instant: true });
+  onTheme(render); onLang(render);
+}
+
+/* ---------------- 9. Bootstrap ---------------- */
+function chBoot() {
+  /* toy replicate */
+  const toks = tokens($("#bootTokens"), TOY_LIST);
+  let Ab = TOY.map(r => r.slice()), bN = 0;
+  const R = rng(2026);
+  const mx = MatrixView($("#bootToyMx"), { n: 5, cell: 44, left: 22, top: 22, fs: 15,
+    onHover: (i, j, ev) => cellTip(i, j, [`a* = ${Ab[i][j]}`, `a = ${TOY[i][j]}`], ev), onMove: (i, j, ev) => cellTip(i, j, [`a* = ${Ab[i][j]}`, `a = ${TOY[i][j]}`], ev) });
+  const s0 = polScores(TOY, WP4);
+  function renderToy() {
+    mx.set(Ab, { fill: v => ramp("mass", v / 5), text: v => (v ? String(v) : "") });
+    const s = polScores(Ab, WP4);
+    RO($("#bootToyRO"), [
+      { k: T("original", "orijinal") + " S<sub>pol</sub>", v: f(s0.Spol, 3) },
+      { k: (bN ? `b = ${bN} · ` : "") + "S<sub>pol</sub><sup>(b)</sup>", v: bN ? f(s.Spol, 3) : "–", hl: true },
+      { k: "S<sub>X</sub><sup>(b)</sup>", v: bN ? f(s.SX, 3) : "–", sw: "x" },
+      { k: "S<sub>Y</sub><sup>(b)</sup>", v: bN ? f(s.SY, 3) : "–", sw: "y" },
+    ]);
+  }
+  let drawing = false;
+  async function drawReplicate(ctx) {
+    if (drawing) return; drawing = true;
+    const mult = new Array(20).fill(0);
+    toks.forEach(e => { e.classList.add("gone"); e.querySelector(".cnt").textContent = ""; });
+    const picks = Array.from({ length: 20 }, () => Math.floor(R() * 20));
+    const B = zeros(5);
+    for (const p of picks) {
+      mult[p]++;
+      const e = toks[p]; e.classList.remove("gone"); e.querySelector(".cnt").textContent = mult[p] > 1 ? "×" + mult[p] : "";
+      B[TOY_LIST[p].i][TOY_LIST[p].j]++;
+      if (!REDUCED) await sleep(70);
+    }
+    Ab = B; bN++; renderToy();
+    drawing = false;
+  }
+  $("#bootDraw").addEventListener("click", () => { chB.stop(); drawReplicate({ token: 0, alive: () => true }); });
+
+  /* full-size bootstrap */
+  const n = total(SIM), cellOf = new Int16Array(n);
+  { let k = 0; SIM.forEach((r, i) => r.forEach((c, j) => { for (let q = 0; q < c; q++) cellOf[k++] = i * 11 + j; })); }
+  const Wf = W10.flat();
+  const pt = polScores(SIM, W10);
+  let Bsel = 2000, res = null, running = false, mode = "plain";
+  const H1 = S("svg", { class: "chart", role: "img", viewBox: "0 0 540 200", "aria-label": "bootstrap histogram" });
+  const H2 = S("svg", { class: "chart", role: "img", viewBox: "0 0 540 150", "aria-label": "difference histogram" });
+  $("#bootHist").appendChild(H1); $("#bootDelta").appendChild(H2);
+  function replicate(r) {
+    const cnt = new Int32Array(121);
+    for (let k = 0; k < n; k++) cnt[cellOf[Math.floor(r() * n)]]++;
+    let SX = 0, SY = 0, nX = 0, nY = 0;
+    for (let i = 0; i < 11; i++) for (let j = 0; j < 11; j++) {
+      const a = cnt[i * 11 + j]; if (!a) continue;
+      if (i > j) { SX += Wf[i * 11 + j] * a; nX += a; } else if (i < j) { SY += Wf[i * 11 + j] * a; nY += a; }
+    }
+    SX /= n; SY /= n;
+    const sX = SX / (100 * nX / n), sY = SY / (100 * nY / n);
+    return [SX + SY, sX * 1e3, sY * 1e3, (sX - sY) * 1e3];
+  }
+  function summary(arr) {
+    const s = Float64Array.from(arr).sort();
+    return { mean: arr.reduce((a, b) => a + b, 0) / arr.length, se: sd(arr), lo: quantile(s, 0.025), hi: quantile(s, 0.975) };
+  }
+  function hist(svg, series, d0, d1, bw, opts = {}) {
+    svg.replaceChildren();
+    const Wd = 540, Ht = +svg.getAttribute("viewBox").split(" ")[3];
+    const top = opts.top || 40, bot = Ht - 24;
+    const x = axisLinear(d0, d1, 36, Wd - 10);
+    const nb = Math.round((d1 - d0) / bw);
+    const counts = series.map(s => { const c = new Array(nb).fill(0); s.data.forEach(v => { const b = Math.floor((v - d0) / bw); if (b >= 0 && b < nb) c[b]++; }); return c; });
+    const ymax = Math.max(5, ...counts.flat());
+    const y = axisLinear(0, ymax * 1.08, bot, top);
+    niceTicks(0, ymax * 1.08, 3).forEach(v => {
+      S("line", { x1: 36, x2: Wd - 10, y1: y(v), y2: y(v), class: "gridline" }, svg);
+      S("text", { x: 30, y: y(v), class: "tick", "text-anchor": "end", "dominant-baseline": "central" }, svg).textContent = v;
+    });
+    S("line", { x1: 36, x2: Wd - 10, y1: bot, y2: bot, class: "axis" }, svg);
+    niceTicks(d0, d1, 6).forEach(v => S("text", { x: x(v), y: bot + 14, class: "tick", "text-anchor": "middle" }, svg).textContent = f(v, 2));
+    series.forEach((s, k) => {
+      let d = "";
+      counts[k].forEach((c, b) => {
+        if (c) S("rect", { x: x(d0 + b * bw) + 0.5, y: y(c), width: Math.max(0.5, x(d0 + bw) - x(d0) - 1), height: bot - y(c), fill: s.color, "fill-opacity": series.length > 1 ? 0.38 : 0.55 }, svg);
+        d += `${b ? "L" : "M"}${x(d0 + b * bw).toFixed(1)} ${y(c).toFixed(1)}H${x(d0 + (b + 1) * bw).toFixed(1)}`;
+      });
+      S("path", { d, fill: "none", stroke: s.color, "stroke-width": 1.6 }, svg);
+    });
+    // hover bins
+    const hov = S("rect", { x: 36, y: top, width: Wd - 46, height: bot - top, fill: "transparent" }, svg);
+    hov.addEventListener("pointermove", ev => {
+      const pt2 = svg.createSVGPoint(); pt2.x = ev.clientX; pt2.y = ev.clientY;
+      const loc = pt2.matrixTransform(svg.getScreenCTM().inverse());
+      const b = Math.floor((x.inv(loc.x) - d0) / bw);
+      if (b < 0 || b >= nb) return hideTip();
+      showTip(`<b>${f(d0 + b * bw, 3)} – ${f(d0 + (b + 1) * bw, 3)}</b><br>` + series.map((s, k) => `${s.name}: ${counts[k][b]}`).join("<br>"), ev);
+    });
+    hov.addEventListener("pointerleave", hideTip);
+    // annotations
+    series.forEach((s, k) => {
+      if (!s.data.length) return;
+      const sm = summary(s.data), yy = 12 + k * 13;
+      S("line", { x1: x(s.point), x2: x(s.point), y1: top - 4, y2: bot, stroke: s.color, "stroke-width": 1.5, "stroke-dasharray": "4 3" }, svg);
+      if (mode === "se" || mode === "ci" || mode === "delta") {
+        const [a, b] = mode === "se" ? [sm.mean - sm.se, sm.mean + sm.se] : [sm.lo, sm.hi];
+        S("line", { x1: x(a), x2: x(b), y1: yy, y2: yy, stroke: s.color, "stroke-width": mode === "se" ? 4 : 2.2 }, svg);
+        [a, b].forEach(v => S("line", { x1: x(v), x2: x(v), y1: yy - 4, y2: yy + 4, stroke: s.color, "stroke-width": 2 }, svg));
+        const lab = mode === "se" ? `${s.name}: ±SE = ±${f(sm.se, 3)}` : `${s.name}: [${f(sm.lo, 2)}, ${f(sm.hi, 2)}]`;
+        S("text", { x: x(b) + 6, y: yy, "dominant-baseline": "central", "font-size": 10.5, fill: C["ink-2"] }, svg).textContent = lab;
+      }
+    });
+    if (opts.zero) S("line", { x1: x(0), x2: x(0), y1: top - 4, y2: bot, stroke: C.ink, "stroke-width": 1.2 }, svg);
+  }
+  function renderBig() {
+    const d = res || { sX: [], sY: [], delta: [], spol: [] };
+    hist(H1, [
+      { name: "S*_X", data: d.sX, color: C["camp-x"], point: pt.sX * 1e3 },
+      { name: "S*_Y", data: d.sY, color: C["camp-y"], point: pt.sY * 1e3 },
+    ], 5.1, 6.3, 0.025);
+    hist(H2, [{ name: "Δ*", data: d.delta, color: C["ink-2"], point: (pt.sX - pt.sY) * 1e3 }], -0.8, 0.8, 0.032, { zero: true, top: 30 });
+    H2.style.opacity = mode === "delta" || mode === "plain" ? 1 : 0.45;
+    $("#bootDeltaTitle").style.opacity = H2.style.opacity;
+    const tb = $("#bootTable");
+    const rows = [
+      ["S<sub>pol</sub>", pt.Spol, d.spol, 3, [0.453, 0.008, 0.436, 0.469]],
+      ["S*<sub>X</sub> × 10³", pt.sX * 1e3, d.sX, 2, [5.68, null, 5.43, 5.95]],
+      ["S*<sub>Y</sub> × 10³", pt.sY * 1e3, d.sY, 2, [5.66, null, 5.44, 5.88]],
+      ["Δ* × 10³", (pt.sX - pt.sY) * 1e3, d.delta, 2, [0.02, null, -0.29, 0.35]],
+    ];
+    tb.innerHTML = `<thead><tr><th></th><th>${T("estimate", "tahmin")}</th><th>SE</th><th>95% CI</th><th>${T("paper", "makale")}</th></tr></thead><tbody>` +
+      rows.map(([lab, est, arr, dd, pub]) => {
+        const sm = arr.length > 1 ? summary(arr) : null;
+        return `<tr><td class="lbl">${lab}</td><td>${f(est, dd + 1)}</td><td>${sm ? f(sm.se, dd + 1) : "–"}</td><td>${sm ? `[${f(sm.lo, dd)}, ${f(sm.hi, dd)}]` : "–"}</td><td>${f(pub[0], dd)} [${f(pub[2], dd)}, ${f(pub[3], dd)}]</td></tr>`;
+      }).join("") + `</tbody>`;
+    tb.insertAdjacentHTML("beforeend", `<caption style="caption-side:bottom;text-align:left;font-size:12px;color:var(--muted);padding-top:6px">${d.sX.length ? `B = ${d.sX.length.toLocaleString("en")} · seed 42 · ` : ""}${T("simulated table; paper column from Tables 4 and 6", "simüle tablo; makale sütunu Tablo 4 ve 6'dan")}</caption>`);
+  }
+  async function run() {
+    if (running) return;
+    running = true; $("#bootRun").disabled = true;
+    const r = rng(42), B = Bsel;
+    res = { spol: [], sX: [], sY: [], delta: [] };
+    const chunk = REDUCED ? B : 40;
+    for (let b = 0; b < B;) {
+      for (let q = 0; q < chunk && b < B; q++, b++) { const v = replicate(r); res.spol.push(v[0]); res.sX.push(v[1]); res.sY.push(v[2]); res.delta.push(v[3]); }
+      renderBig();
+      if (!REDUCED) await new Promise(requestAnimationFrame);
+    }
+    running = false; $("#bootRun").disabled = false;
+  }
+  $("#bootRun").addEventListener("click", () => { chB.stop(); run(); });
+  $$("#bootB button").forEach(b => b.addEventListener("click", () => {
+    Bsel = +b.dataset.v; $$("#bootB button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  }));
+  function view(big) { $("#bootToy").hidden = big; $("#bootBig").hidden = !big; }
+  const chB = Chapter("boot", [
+    { enter: ctx => { view(false); if (ctx.instant) { renderToy(); return; } drawReplicate(ctx); }, dur: 4200 },
+    { enter: ctx => { view(false); drawReplicate(ctx); }, dur: 4200 },
+    { enter: () => { view(true); mode = "plain"; if (!res || res.sX.length !== Bsel) run(); else renderBig(); }, dur: 5200 },
+    { enter: () => { view(true); mode = "se"; if (!res) run(); else renderBig(); } },
+    { enter: () => { view(true); mode = "ci"; if (!res) run(); else renderBig(); } },
+    { enter: () => { view(true); mode = "delta"; if (!res) run(); else renderBig(); } },
+  ]);
+  renderToy(); renderBig();
+  chB.go(0, { instant: true });
+  onTheme(() => { renderToy(); renderBig(); }); onLang(() => { renderToy(); renderBig(); });
+}
+
+/* ---------------- 10. Results ---------------- */
+function chResults() {
+  const tabs = $$("#resTabs [role=tab]");
+  const drawn = {};
+  const draws = { a: tabA, b: tabB, c: tabC, d: tabD, e: tabE };
+  function show(id) {
+    tabs.forEach(t => t.setAttribute("aria-selected", String(t.id === "tab-" + id)));
+    ["a", "b", "c", "d", "e"].forEach(k => { $("#res-" + k).hidden = k !== id; });
+    if (!drawn[id]) { drawn[id] = draws[id](); }
+  }
+  tabs.forEach(t => t.addEventListener("click", () => show(t.id.slice(4))));
+  tabs.forEach((t, k) => t.addEventListener("keydown", ev => {
+    if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
+    const nx = tabs[(k + (ev.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length]; nx.focus(); nx.click();
+  }));
+  show("a");
+}
+function tabA() {
+  let mode = "WP";
+  const n = total(SIM), P = SIM.map(r => r.map(v => v / n)), WPm = P.map((r, i) => r.map((v, j) => v * W10[i][j]));
+  const pt = polScores(SIM, W10);
+  const tipL = (i, j) => [`${T("count", "sayım")} a = ${SIM[i][j]}`, `p = ${f(P[i][j], 4)}`, `w = ${f(W10[i][j], 2)}`, `WP = ${f(WPm[i][j], 4)}`];
+  const mx = MatrixView($("#aMx"), { n: 11, cell: 44, left: 40, top: 40, fs: 10.5, rowTitle: () => T("AKP affinity (i)", "AKP yakınlığı (i)"), colTitle: () => T("CHP affinity (j)", "CHP yakınlığı (j)"),
+    onHover: (i, j, ev) => cellTip(i, j, tipL(i, j), ev), onMove: (i, j, ev) => cellTip(i, j, tipL(i, j), ev) });
+  function render() {
+    if (mode === "WP") mx.set(WPm, { fill: (v, i, j) => (SIM[i][j] ? ramp("pos", v / 0.14) : C.sheet), text: (v, i, j) => (SIM[i][j] ? fc(v, 3) : "") });
+    else mx.set(SIM, { fill: v => (v ? ramp("mass", Math.sqrt(v / 311)) : C.sheet), text: v => (v ? String(v) : "") });
+    mx.guide("diag");
+    $$("#aMode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === mode)));
+    const corner = (WPm[0][10] + WPm[10][0]) / pt.Spol;
+    RO($("#aRO"), [
+      { k: "n", v: n.toLocaleString("en") },
+      { k: "π<sub>X</sub> · π<sub>0</sub> · π<sub>Y</sub>", v: `${f(pt.piX, 1)} · ${f(pt.pi0, 1)} · ${f(pt.piY, 1)}` },
+      { k: "S<sub>X</sub> (AKP)", v: f(pt.SX, 3), sw: "x" },
+      { k: "S<sub>Y</sub> (CHP)", v: f(pt.SY, 3), sw: "y" },
+      { k: "S<sub>pol</sub>", v: f(pt.Spol, 3), hl: true, s: T("paper: 0.453", "makale: 0,453") },
+      { k: T("two corners", "iki köşe"), v: f(100 * corner, 1) + "%", s: T(`of S_pol, from ${f(100 * 570 / n, 1)}% of people`, `S_pol'un; kişilerin %${f(100 * 570 / n, 1)}'sinden`) },
+    ]);
+  }
+  $$("#aMode button").forEach(b => b.addEventListener("click", () => { mode = b.dataset.v; render(); }));
+  render(); onTheme(render); onLang(render);
+  return true;
+}
+function tabB() {
+  const K = 13;
+  const mx = MatrixView($("#bMx"), { n: K, cell: 38, left: 70, top: 66, fs: 10, rowLabels: T3_ORDER, colLabels: T3_ORDER, rotateCols: true,
+    onHover: (i, j, ev) => tipB(i, j, ev), onMove: (i, j, ev) => tipB(i, j, ev) });
+  function tipB(i, j, ev) {
+    if (i === j) return hideTip();
+    const a = T3_ORDER[Math.max(i, j)], b = T3_ORDER[Math.min(i, j)];
+    showTip(`<b>${T3_ORDER[i]} × ${T3_ORDER[j]}</b><br>S_pol = ${f(T3[Math.max(i, j)][Math.min(i, j)], 2)}<br>S_con = ${f(T3[Math.min(i, j)][Math.max(i, j)], 2)}`, ev);
+  }
+  function render() {
+    mx.set(T3, {
+      fill: (v, i, j) => (i === j ? C.sheet : i > j ? ramp("pos", v / 0.45) : ramp("neg", Math.abs(v) / 0.83)),
+      text: (v, i, j) => (i === j ? "" : fc(v, 2)),
+    });
+    const sel = [...T4.slice(0, 5), ...T4.slice(-5)];
+    $("#bTop").innerHTML = `<thead><tr><th>${T("pair", "çift")}</th><th>n</th><th>S<sub>pol</sub></th><th>95% CI</th></tr></thead><tbody>` +
+      sel.map((r, k) => `${k === 5 ? `<tr><td colspan="4" style="text-align:center;color:var(--muted)">⋯</td></tr>` : ""}<tr><td class="lbl">${r[0]}</td><td>${r[1]}</td><td>${f(r[4], 3)}</td><td>[${f(r[5], 3)}, ${f(r[6], 3)}]</td></tr>`).join("") + "</tbody>";
+  }
+  render(); onTheme(render); onLang(render);
+  return true;
+}
+function tabC() {
+  const svg = S("svg", { class: "chart", role: "img", viewBox: "0 0 540 360", "aria-label": "salience scatter" });
+  $("#cScatter").appendChild(svg);
+  const xs = PARTIES.map(p => p.mean), ys = PARTIES.map(p => p.spol);
+  const mxv = xs.reduce((a, b) => a + b) / xs.length, myv = ys.reduce((a, b) => a + b) / ys.length;
+  let sxy = 0, sxx = 0, syy = 0;
+  xs.forEach((x, k) => { sxy += (x - mxv) * (ys[k] - myv); sxx += (x - mxv) ** 2; syy += (ys[k] - myv) ** 2; });
+  const b = sxy / sxx, a = myv - b * mxv, r = sxy / Math.sqrt(sxx * syy);
+  $("#cR").textContent = `r = ${f(r, 2)}`; $("#cR2").textContent = `r = ${f(r, 2).replace(".", ",")}`;
+  const off = { GP: [7, 11, "start"], DEVA: [0, -11, "middle"], HÜDAPAR: [-8, 2, "end"], SP: [2, 16, "middle"], MP: [7, 12, "start"], "İYİ": [7, 9, "start"], "TİP": [-7, -7, "end"],
+    DEM: [-8, -6, "end"], ZP: [0, -12, "middle"], YRP: [8, 3, "start"], MHP: [8, 4, "start"], AKP: [8, 4, "start"], CHP: [-8, -6, "end"] };
+  function render() {
+    svg.replaceChildren();
+    const X = axisLinear(0.3, 4.4, 50, 528), Y = axisLinear(0.095, 0.32, 324, 14);
+    niceTicks(0.1, 0.3, 4).forEach(v => {
+      S("line", { x1: 50, x2: 528, y1: Y(v), y2: Y(v), class: "gridline" }, svg);
+      S("text", { x: 44, y: Y(v), class: "tick", "text-anchor": "end", "dominant-baseline": "central" }, svg).textContent = f(v, 2);
+    });
+    [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4].forEach(v => S("text", { x: X(v), y: 340, class: "tick", "text-anchor": "middle" }, svg).textContent = v);
+    S("text", { x: 289, y: 357, class: "axt", "text-anchor": "middle" }, svg).textContent = T("mean affinity rating of the party (0–10)", "partinin ortalama yakınlık puanı (0–10)");
+    S("text", { x: 12, y: 170, class: "axt", "text-anchor": "middle", transform: "rotate(-90 12 170)" }, svg).textContent = T("mean S_pol against the other 12", "diğer 12'ye karşı ortalama S_pol");
+    S("line", { x1: X(0.4), y1: Y(a + b * 0.4), x2: X(4.25), y2: Y(a + b * 4.25), stroke: C.muted, "stroke-width": 1.5, "stroke-dasharray": "6 4" }, svg);
+    PARTIES.forEach(p => {
+      const yh = a + b * p.mean, res = p.spol - yh;
+      S("line", { x1: X(p.mean), x2: X(p.mean), y1: Y(yh), y2: Y(p.spol), stroke: res > 0 ? C["pos-2"] : C["neg-2"], "stroke-width": 2.5 }, svg);
+    });
+    PARTIES.forEach(p => {
+      const c = S("circle", { cx: X(p.mean), cy: Y(p.spol), r: 5.5, fill: C.ink, stroke: C.sheet, "stroke-width": 2 }, svg);
+      const o = off[p.a] || [7, 4, "start"];
+      S("text", { x: X(p.mean) + o[0], y: Y(p.spol) + o[1], "text-anchor": o[2], "font-size": 11, "font-weight": 600, "font-family": "Archivo, system-ui, sans-serif", fill: C["ink-2"] }, svg).textContent = p.a;
+      const hit = S("circle", { cx: X(p.mean), cy: Y(p.spol), r: 12, fill: "transparent" }, svg);
+      const tipT = ev => showTip(`<b>${p.a}</b> · ${LANG === "tr" ? p.tr : p.en}<br>${T("mean affinity", "ort. yakınlık")} ${f(p.mean, 2)}<br>S̄_pol ${f(p.spol, 3)} · ${T("fit", "uyum")} ${f(a + b * p.mean, 3)}<br>${T("residual", "artık")} ${p.spol - (a + b * p.mean) >= 0 ? "+" : ""}${f(p.spol - (a + b * p.mean), 3)}`, ev);
+      hit.addEventListener("pointerenter", tipT); hit.addEventListener("pointermove", tipT); hit.addEventListener("pointerleave", hideTip);
+    });
+  }
+  render(); onTheme(render); onLang(render);
+  return true;
+}
+function tabD() {
+  const svg = S("svg", { class: "chart", role: "img", viewBox: "0 0 540 300", "aria-label": "kernel sensitivity" });
+  $("#dChart").appendChild(svg);
+  const sims = T6.map(r => polScores(SIM, weights(10, r[2]).W).Spol);
+  function render() {
+    svg.replaceChildren();
+    const X = axisLinear(0.36, 0.56, 190, 528), row = 32, top = 14;
+    niceTicks(0.36, 0.56, 5).forEach(v => {
+      S("line", { x1: X(v), x2: X(v), y1: top - 6, y2: top + T6.length * row, class: "gridline" }, svg);
+      S("text", { x: X(v), y: top + T6.length * row + 14, class: "tick", "text-anchor": "middle" }, svg).textContent = f(v, 2);
+    });
+    T6.forEach((r, k) => {
+      const y = top + k * row + row / 2;
+      S("text", { x: 182, y, class: "axt", "text-anchor": "end", "dominant-baseline": "central" }, svg).textContent = LANG === "tr" ? r[1] : r[0];
+      S("line", { x1: X(r[5]), x2: X(r[6]), y1: y, y2: y, stroke: C["ink-2"], "stroke-width": 2.2 }, svg);
+      S("circle", { cx: X(r[4]), cy: y, r: 5, fill: C.ink, stroke: C.sheet, "stroke-width": 1.5 }, svg);
+      const s = sims[k], d = 5.5;
+      S("path", { d: `M${X(s)} ${y - d - 7}l${d} ${d}l${-d} ${d}l${-d} ${-d}z`, fill: C.sheet, stroke: C.pen, "stroke-width": 2 }, svg);
+      const hit = S("rect", { x: 0, y: y - row / 2, width: 540, height: row, fill: "transparent" }, svg);
+      const tt = ev => showTip(`<b>${LANG === "tr" ? r[1] : r[0]}</b><br>${T("published", "yayımlanan")} ${f(r[4], 3)} [${f(r[5], 3)}, ${f(r[6], 3)}]<br>${T("this page (simulated)", "bu sayfa (simüle)")} ${f(s, 3)}<br>ρ = ${f(r[10], 4)}`, ev);
+      hit.addEventListener("pointerenter", tt); hit.addEventListener("pointermove", tt); hit.addEventListener("pointerleave", hideTip);
+    });
+    S("text", { x: X(0.46), y: 298, class: "axt", "text-anchor": "middle" }, svg).textContent = "S_pol, AKP × CHP";
+    $("#dTable").innerHTML = `<thead><tr><th>${T("specification", "tanım")}</th><th>max|m|</th><th>${T("78 pairs: mean", "78 çift: ort.")}</th><th>ρ</th></tr></thead><tbody>` +
+      T6.map(r => `<tr><td class="lbl">${LANG === "tr" ? r[1] : r[0]}</td><td>${f(r[3], 4)}</td><td>${f(r[7], 3)}</td><td>${f(r[10], 4)}</td></tr>`).join("") + "</tbody>";
+  }
+  render(); onTheme(render); onLang(render);
+  return true;
+}
+function jacobiEigen(A) {
+  const n = A.length, a = A.map(r => r.slice()), V = A.map((r, i) => r.map((_, j) => (i === j ? 1 : 0)));
+  for (let sweep = 0; sweep < 100; sweep++) {
+    let off = 0;
+    for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) off += a[p][q] * a[p][q];
+    if (off < 1e-22) break;
+    for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) {
+      if (Math.abs(a[p][q]) < 1e-300) continue;
+      const th = (a[q][q] - a[p][p]) / (2 * a[p][q]);
+      const t = Math.sign(th || 1) / (Math.abs(th) + Math.sqrt(th * th + 1));
+      const c = 1 / Math.sqrt(t * t + 1), s = t * c;
+      for (let k = 0; k < n; k++) { const akp = a[k][p], akq = a[k][q]; a[k][p] = c * akp - s * akq; a[k][q] = s * akp + c * akq; }
+      for (let k = 0; k < n; k++) { const apk = a[p][k], aqk = a[q][k]; a[p][k] = c * apk - s * aqk; a[q][k] = s * apk + c * aqk; }
+      for (let k = 0; k < n; k++) { const vkp = V[k][p], vkq = V[k][q]; V[k][p] = c * vkp - s * vkq; V[k][q] = s * vkp + c * vkq; }
+    }
+  }
+  return { values: a.map((r, i) => r[i]), vectors: V };
+}
+function tabE() {
+  const K = 13, D = zeros(K);
+  for (let i = 0; i < K; i++) for (let j = 0; j < i; j++) { D[i][j] = D[j][i] = T3[i][j]; }
+  const D2 = D.map(r => r.map(v => v * v));
+  const rowM = D2.map(r => r.reduce((a, b) => a + b) / K), allM = rowM.reduce((a, b) => a + b) / K;
+  const B = D2.map((r, i) => r.map((v, j) => -0.5 * (v - rowM[i] - rowM[j] + allM)));
+  const { values, vectors } = jacobiEigen(B);
+  const order = values.map((v, k) => k).sort((p, q) => values[q] - values[p]);
+  const pos = values.filter(v => v > 1e-12).reduce((a, b) => a + b, 0);
+  const share = (values[order[0]] + values[order[1]]) / pos;
+  let XY = T3_ORDER.map((_, i) => [0, 1].map(d => vectors[i][order[d]] * Math.sqrt(values[order[d]])));
+  const ci = T3_ORDER.indexOf("CHP");
+  if (XY[ci][0] < 0) XY = XY.map(p => [-p[0], p[1]]);
+  if (XY[ci][1] < 0) XY = XY.map(p => [p[0], -p[1]]);
+  const svg = S("svg", { class: "chart", role: "img", viewBox: "0 0 540 380", "aria-label": "party map" });
+  $("#eMap").appendChild(svg);
+  const links = T4.filter(r => r[4] > 0.29).map(r => r[0].split(" × "));
+  const meanOf = a => PARTIES.find(p => p.a === a).mean;
+  const off = { "İYİ": [-4, -11, "end"], ZP: [8, -6, "start"], GP: [-8, 2, "end"], MP: [8, 4, "start"], DEVA: [8, 12, "start"], SP: [-8, 2, "end"], "TİP": [8, 4, "start"], YRP: [-9, 3, "end"],
+    HÜDAPAR: [0, 18, "middle"], DEM: [9, 4, "start"], AKP: [9, -8, "start"], MHP: [8, -9, "start"], CHP: [-10, -12, "end"] };
+  function render() {
+    svg.replaceChildren();
+    const X = axisLinear(-0.25, 0.27, 52, 528), Y = axisLinear(-0.13, 0.16, 344, 14);
+    [-0.2, -0.1, 0, 0.1, 0.2].forEach(v => S("text", { x: X(v), y: 360, class: "tick", "text-anchor": "middle" }, svg).textContent = f(v, 1));
+    [-0.1, 0, 0.1].forEach(v => S("text", { x: 46, y: Y(v), class: "tick", "text-anchor": "end", "dominant-baseline": "central" }, svg).textContent = f(v, 1));
+    S("line", { x1: X(0), x2: X(0), y1: 10, y2: 348, class: "gridline" }, svg);
+    S("line", { x1: 52, x2: 528, y1: Y(0), y2: Y(0), class: "gridline" }, svg);
+    S("text", { x: 284, y: 377, class: "axt", "text-anchor": "middle" }, svg).textContent = T("first principal coordinate", "birinci temel koordinat");
+    S("text", { x: 10, y: 180, class: "axt", "text-anchor": "middle", transform: "rotate(-90 10 180)" }, svg).textContent = T("second principal coordinate", "ikinci temel koordinat");
+    links.forEach(([p, q]) => {
+      const a = XY[T3_ORDER.indexOf(p)], b = XY[T3_ORDER.indexOf(q)];
+      S("line", { x1: X(a[0]), y1: Y(a[1]), x2: X(b[0]), y2: Y(b[1]), stroke: C["pos-2"], "stroke-width": 1.2, opacity: 0.75 }, svg);
+    });
+    T3_ORDER.forEach((p, i) => {
+      const [x, y] = XY[i], rr = 2.5 + 3.2 * Math.sqrt(meanOf(p));
+      S("circle", { cx: X(x), cy: Y(y), r: rr, fill: C.pen, "fill-opacity": 0.75, stroke: C.sheet, "stroke-width": 1.5 }, svg);
+      const o = off[p] || [8, 4, "start"];
+      S("text", { x: X(x) + o[0], y: Y(y) + o[1], "text-anchor": o[2], "font-size": 11.5, "font-weight": 700, "font-family": "Archivo, system-ui, sans-serif", fill: C.ink }, svg).textContent = p;
+      const hit = S("circle", { cx: X(x), cy: Y(y), r: 13, fill: "transparent" }, svg);
+      const tt = ev => showTip(`<b>${p}</b><br>(${f(x, 3)}, ${f(y, 3)})<br>${T("mean affinity", "ort. yakınlık")} ${f(meanOf(p), 2)}`, ev);
+      hit.addEventListener("pointerenter", tt); hit.addEventListener("pointermove", tt); hit.addEventListener("pointerleave", hideTip);
+    });
+    $("#eCap").innerHTML = T(`First two axes recover <b>${f(100 * share, 1)}%</b> of the configuration (paper: 81.5%). AKP sits at ${f(XY[0][0], 3)} and CHP at ${f(XY[1][0], 3)} on the first axis. Red lines: pairs with S<sub>pol</sub> &gt; 0.29 (Table 4).`,
+      `İlk iki eksen yapılanmanın <b>%${f(100 * share, 1)}</b>'ini açıklıyor (makale: %81,5). Birinci eksende AKP ${f(XY[0][0], 3)}, CHP ${f(XY[1][0], 3)} konumunda. Kırmızı çizgiler: S<sub>pol</sub> &gt; 0,29 olan çiftler (Tablo 4).`);
+  }
+  render(); onTheme(render); onLang(render);
+  return true;
+}
+
+/* ---------------- TOC highlight ---------------- */
+function tocSpy() {
+  const links = $$("#toc a"), map = new Map(links.map(a => [a.getAttribute("href").slice(1), a]));
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      links.forEach(a => a.classList.remove("on"));
+      const a = map.get(e.target.id);
+      if (a) { a.classList.add("on"); const t = $("#toc"); t.scrollTo({ left: a.offsetLeft - t.clientWidth / 2 + a.offsetWidth / 2, behavior: REDUCED ? "auto" : "smooth" }); }
+    });
+  }, { rootMargin: "-45% 0px -50% 0px" });
+  $$("section.chapter").forEach(s => io.observe(s));
+}
+
+/* ---------------- init ---------------- */
+function init() {
+  readPalette(); watchTheme();
+  let saved = null;
+  try { saved = localStorage.getItem("bipol-lang"); } catch (e) { /* storage unavailable */ }
+  setLang(saved || ((navigator.language || "").toLowerCase().startsWith("tr") ? "tr" : "en"), false);
+  $$(".lang button").forEach(b => b.addEventListener("click", () => setLang(b.dataset.lang)));
+  const hero = Hero();
+  const run = (name, fn) => { try { fn(); } catch (e) { console.error(name, e); } };
+  run("problem", chProblem); run("table", chTable); run("weights", chWeights); run("kernels", chKernels);
+  run("prob", chProb); run("scores", chScores); run("size", chSize); run("consensus", chConsensus);
+  run("boot", chBoot); run("results", chResults); run("toc", tocSpy);
+  hero.play();
+}
+init();
+</script>
+</body>
+</html>

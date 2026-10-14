@@ -26,6 +26,12 @@ The core idea: build a joint frequency table of two variables, multiply each cel
 
 ---
 
+## Visual explainer
+
+[`docs/explainer/index.html`](docs/explainer/index.html) is an animated, step-by-step walkthrough of the method in English and Turkish. It covers the joint table, the weight matrices and kernels, global normalisation, per-person scores, consensus and the bootstrap, with live simulations and a tour of the published results. Open the file in a browser; it needs an internet connection for its fonts and MathJax.
+
+---
+
 ## Quick Start
 
 ```python
