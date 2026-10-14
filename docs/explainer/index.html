@@ -316,6 +316,18 @@ table.data td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 table.data th:first-child, table.data td:first-child { text-align: left; }
 table.data td.lbl { font-family: var(--display); font-weight: 600; }
 
+/* overview video */
+.chapter.video-band { padding-block: 56px 52px; }
+.video-fig { margin: 0; max-width: 1120px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.video-fig video {
+  display: block; width: 100%; height: auto; max-width: 100%; aspect-ratio: 16 / 9;
+  border-radius: var(--radius); border: 1px solid var(--rule); background: var(--sheet);
+}
+.video-fig figcaption { font-size: 14.5px; line-height: 1.5; color: var(--ink-2); max-width: 78ch; }
+details.transcript { max-width: 1120px; margin-top: 20px; border-top: 1px solid var(--rule); padding-top: 14px; }
+details.transcript summary { cursor: pointer; font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--pen); width: fit-content; }
+details.transcript > div { margin-top: 14px; display: grid; gap: 12px; max-width: 70ch; color: var(--ink-2); }
+
 /* recipe */
 .recipe-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
 .recipe { list-style: none; margin: 0; padding: 0; counter-reset: rc; border-top: 1px solid var(--rule); }
@@ -371,6 +383,7 @@ footer .wrap { padding-block: 28px 48px; display: grid; gap: 10px; font-size: 14
     <a class="brand" href="#hero">bi<b>polar</b>ization<span lang="en"> · step by step</span><span lang="tr"> · adım adım</span></a>
     <nav id="toc" aria-label="Chapters">
       <ol>
+        <li><a href="#video"><span class="n">▶</span><span lang="en">Video</span><span lang="tr">Video</span></a></li>
         <li><a href="#ch-problem"><span class="n">1</span><span lang="en">Problem</span><span lang="tr">Sorun</span></a></li>
         <li><a href="#ch-table"><span class="n">2</span><span lang="en">Joint table</span><span lang="tr">Ortak tablo</span></a></li>
         <li><a href="#ch-weights"><span class="n">3</span><span lang="en">Weights</span><span lang="tr">Ağırlıklar</span></a></li>
@@ -401,7 +414,8 @@ footer .wrap { padding-block: 28px 48px; display: grid; gap: 10px; font-size: 14
       <p class="lede" lang="en">Most polarization indices read one distribution at a time. This method reads the joint table of two survey items and asks where in that table the disagreement sits. Step through the equations below. Every number on this page is recomputed in your browser.</p>
       <p class="lede" lang="tr">Kutuplaşma endekslerinin çoğu dağılımları tek tek okur. Bu yöntem iki anket maddesinin ortak tablosunu okur ve anlaşmazlığın bu tablonun neresinde durduğunu sorar. Aşağıdaki denklemleri adım adım izleyin. Bu sayfadaki her sayı tarayıcınızda yeniden hesaplanır.</p>
       <div class="hero-cta">
-        <a class="btn primary" href="#ch-problem"><span lang="en">Start with the problem</span><span lang="tr">Sorunla başlayın</span> ↓</a>
+        <a class="btn primary" href="#video"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg><span lang="en">Watch the overview</span><span lang="tr">Genel bakışı izleyin</span><span class="mono" style="opacity:.8;font-weight:500">2:40</span></a>
+        <a class="btn" href="#ch-problem"><span lang="en">Start with the problem</span><span lang="tr">Sorunla başlayın</span> ↓</a>
         <a class="btn" href="#ch-recipe"><span lang="en">Skip to the recipe</span><span lang="tr">Özete atlayın</span></a>
       </div>
     </div>
@@ -420,6 +434,55 @@ footer .wrap { padding-block: 28px 48px; display: grid; gap: 10px; font-size: 14
         <span lang="tr">Her nokta, <b>simüle edilmiş</b> bir AKP × CHP örnekleminde (n = 2.218) bir katılımcıdır ve 0–10 arası iki puanının kesiştiği hücreye düşer. Dolan iki köşe, yöntemin yakalamak için kurulduğu karşıt kamplardır.</span>
       </figcaption>
     </figure>
+  </div>
+</section>
+
+<!-- =============================== VIDEO =============================== -->
+<section class="chapter video-band" id="video">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow"><span lang="en">Overview · 2 min 40 s · narrated</span><span lang="tr">Genel bakış · 2 dk 40 sn · sesli anlatım</span></div>
+      <h2><span lang="en">The whole method in under three minutes</span><span lang="tr">Tüm yöntem üç dakikadan kısa sürede</span></h2>
+      <p class="lede" lang="en">A narrated walk through the pipeline, from the joint table to the bootstrap. Watch it first, then step through each part below at your own pace.</p>
+      <p class="lede" lang="tr">Ortak tablodan bootstrap'e kadar tüm işlem hattının sesli anlatımı. Önce izleyin, ardından aşağıdaki her bölümü kendi hızınızda adım adım inceleyin.</p>
+    </div>
+    <figure class="video-fig">
+      <video id="overviewVideo" controls preload="metadata" playsinline width="1920" height="1080" poster="bipolarization-explainer-poster.jpg" aria-label="Narrated overview of the bipolarization method, 2 minutes 40 seconds">
+        <source src="bipolarization-explainer.mp4" type="video/mp4">
+        <p>This browser cannot play the video.</p>
+      </video>
+      <figcaption>
+        <span lang="en">Narrated in English, with subtitles. Voice generated with ElevenLabs. The AKP × CHP cell counts on screen are simulated to match the paper's published figures; every number quoted is a published value.</span>
+        <span lang="tr">Video İngilizce anlatımlı ve İngilizce altyazılıdır; Türkçe metni aşağıda bulabilirsiniz. Ses ElevenLabs ile üretildi. Ekrandaki AKP × CHP hücre sayıları, makalede yayımlanan şekillerle örtüşecek biçimde simüle edilmiştir; aktarılan her sayı yayımlanmış bir değerdir.</span>
+      </figcaption>
+    </figure>
+    <details class="transcript">
+      <summary><span lang="en">Read the transcript</span><span lang="tr">Türkçe metni okuyun</span></summary>
+      <div lang="en">
+        <p>Two camps, one table. Here is how the bipolarization method measures polarization.</p>
+        <p>Most polarization measures read one question at a time. But polarization is about pairs: people who warm to one party while rejecting another. Two survey items can have identical answer distributions… and still hide completely opposite camps.</p>
+        <p>So the method starts from the joint table. Each respondent rates both items on a scale from zero to ten, and lands in one cell of an eleven-by-eleven table. The diagonal holds people who rate both the same. Below it sit those who prefer X; above it, those who prefer Y.</p>
+        <p>Every cell then gets a weight, built from two terms. Distance: how far apart the two ratings are. And agreement: how symmetrically the pair sits around the midpoint of the scale. Multiply them, and the weight peaks in the two far corners. A five-point gap that straddles the midpoint counts almost twice as much as one confined to half of the scale.</p>
+        <p>A kernel can bend how quickly weight grows with distance, and a final rescaling keeps every weight between minus one and one.</p>
+        <p>Next, divide every count by the same total, so the table becomes a probability distribution. Multiply it, cell by cell, with the weights, and add up each triangle. That gives one score for the camp that prefers X, one for the camp that prefers Y, and their sum: the overall polarization score. For the AKP and CHP pair in the 2024 Turkey General Social Survey, the two extreme corners alone supply more than half of that score.</p>
+        <p>But a camp can score high simply by being large. Dividing each score by the camp's share of the sample gives a per-person score: the average weight one member carries. For AKP and CHP, the raw scores differ… yet per person, the two camps are almost identical.</p>
+        <p>Swap the main diagonal for the anti-diagonal, and the same machinery measures consensus: shared warmth, or shared rejection, of both items.</p>
+        <p>Finally, uncertainty. Resample whole respondents with replacement, two thousand times, rerun everything, and read standard errors and percentile intervals straight from the replicates.</p>
+        <p>One table, one weight matrix, and scores that separate how many people disagree from how strongly they do. The method is available as the bipolarization package for Python, with a port for R.</p>
+      </div>
+      <div lang="tr">
+        <p>İki kamp, tek tablo. Bipolarization yönteminin kutuplaşmayı nasıl ölçtüğüne bakalım.</p>
+        <p>Kutuplaşma ölçülerinin çoğu soruları tek tek okur. Oysa kutuplaşma çiftlerle ilgilidir: bir partiye ısınırken öbürünü reddeden insanlar. İki anket maddesinin yanıt dağılımları birebir aynı olabilir… ve yine de tamamen karşıt kampları gizleyebilir.</p>
+        <p>Bu yüzden yöntem ortak tablodan başlar. Her katılımcı iki maddeyi sıfırdan ona kadar bir ölçekte puanlar ve on bire on birlik bir tablonun bir hücresine düşer. Köşegende ikisine aynı puanı verenler durur. Altında X'i tercih edenler, üstünde Y'yi tercih edenler yer alır.</p>
+        <p>Ardından her hücre iki terimden kurulan bir ağırlık alır. Uzaklık: iki puanın birbirinden ne kadar uzak olduğu. Uyum: çiftin ölçeğin orta noktası etrafında ne kadar simetrik durduğu. İkisini çarpın; ağırlık iki uç köşede en yüksek değerine ulaşır. Orta noktanın iki yanına yayılan beş puanlık bir fark, ölçeğin yarısına sıkışmış bir farktan neredeyse iki kat fazla sayılır.</p>
+        <p>Bir çekirdek, ağırlığın uzaklıkla ne kadar hızlı arttığını değiştirebilir; son bir yeniden ölçekleme de her ağırlığı eksi bir ile bir arasında tutar.</p>
+        <p>Sonra her sayımı aynı toplama bölün; tablo bir olasılık dağılımına dönüşür. Onu ağırlıklarla hücre hücre çarpın ve her üçgeni toplayın. Böylece X'i tercih eden kamp için bir skor, Y'yi tercih eden kamp için bir skor ve ikisinin toplamı olan genel kutuplaşma skoru elde edilir. 2024 Türkiye Genel Sosyal Saha Araştırması'ndaki AKP ve CHP çiftinde, yalnızca iki uç köşe bu skorun yarısından fazlasını sağlar.</p>
+        <p>Ama bir kamp yalnızca kalabalık olduğu için de yüksek skor alabilir. Her skoru kampın örneklemdeki payına bölmek kişi başı bir skor verir: bir üyenin taşıdığı ortalama ağırlık. AKP ve CHP için ham skorlar farklıdır… ama kişi başına iki kamp neredeyse aynıdır.</p>
+        <p>Ana köşegenin yerine ters köşegeni koyun; aynı mekanizma bu kez uzlaşıyı ölçer: iki maddeye yönelik ortak sıcaklığı ya da ortak reddi.</p>
+        <p>Son olarak belirsizlik. Katılımcıları bütün olarak, yerine koyarak iki bin kez yeniden örnekleyin, her şeyi yeniden çalıştırın ve standart hataları ve yüzdelik aralıklarını doğrudan tekrarlardan okuyun.</p>
+        <p>Tek tablo, tek ağırlık matrisi ve kaç kişinin ayrıştığını ne kadar güçlü ayrıştıklarından ayıran skorlar. Yöntem, Python için bipolarization paketi olarak ve bir R sürümüyle kullanılabilir.</p>
+      </div>
+    </details>
   </div>
 </section>
 

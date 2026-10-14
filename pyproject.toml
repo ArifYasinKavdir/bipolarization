@@ -31,3 +31,7 @@ dev = ["pytest", "build", "twine"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["polarization"]
+
+[tool.hatch.build.targets.sdist]
+# docs/ holds the explainer page and its video; keep them out of the PyPI source distribution
+exclude = ["docs/"]

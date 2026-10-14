@@ -289,6 +289,18 @@ table.data td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 table.data th:first-child, table.data td:first-child { text-align: left; }
 table.data td.lbl { font-family: var(--display); font-weight: 600; }
 
+/* overview video */
+.chapter.video-band { padding-block: 56px 52px; }
+.video-fig { margin: 0; max-width: 1120px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.video-fig video {
+  display: block; width: 100%; height: auto; max-width: 100%; aspect-ratio: 16 / 9;
+  border-radius: var(--radius); border: 1px solid var(--rule); background: var(--sheet);
+}
+.video-fig figcaption { font-size: 14.5px; line-height: 1.5; color: var(--ink-2); max-width: 78ch; }
+details.transcript { max-width: 1120px; margin-top: 20px; border-top: 1px solid var(--rule); padding-top: 14px; }
+details.transcript summary { cursor: pointer; font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--pen); width: fit-content; }
+details.transcript > div { margin-top: 14px; display: grid; gap: 12px; max-width: 70ch; color: var(--ink-2); }
+
 /* recipe */
 .recipe-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
 .recipe { list-style: none; margin: 0; padding: 0; counter-reset: rc; border-top: 1px solid var(--rule); }
