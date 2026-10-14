@@ -1,5 +1,7 @@
 """Tests for polarization.scores."""
 
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -65,7 +67,7 @@ def test_point_estimates_match_hand_computed_values():
     result = calculate_scores(
         _toy_frame(), "X", "Y",
         start_value=0, end_value=4, p=1.0, q=1.0,
-        score_type="polarization", kernel="power", formula="global", B=50,
+        score_type="polarization", kernel="power", formula="global", B=0,
     )
 
     # W[i, j] = |i - j| / 4 * (1 - |i + j - 4| / 4); each score is the sum of
@@ -95,11 +97,10 @@ def test_bootstrap_replicates_match_direct_row_resample(score_type, formula):
     replicates = []
     for _ in range(B):
         resample = rng.choice(rows, size=len(rows), replace=True)  # whole rows
-        replicates.append(scores._single_run_score(
-            pd.DataFrame(resample, columns=["X", "Y"]), x="X", y="Y",
-            start_value=0, end_value=4, p=1.0, q=1.0, score_type=score_type,
-            dropna=False, kernel="power", formula=formula,
-        ))
+        replicates.append(calculate_scores(
+            pd.DataFrame(resample, columns=["X", "Y"]), "X", "Y",
+            start_value=0, end_value=4, score_type=score_type, formula=formula, B=0,
+        )["point"])
 
     for key, summary in result["bootstrap"].items():
         assert summary["dist"] == pytest.approx([r[key] for r in replicates])
@@ -122,3 +123,16 @@ def test_every_replicate_counts_the_complete_pairs(monkeypatch):
 
     # The point-estimate table, then one table per replicate.
     assert table_totals == [n] * 51
+
+
+def test_zero_replications_skip_the_bootstrap():
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        result = calculate_scores(
+            _toy_frame(), "X", "Y",
+            start_value=0, end_value=4, B=0, keep_dists=True,
+        )
+
+    for summary in result["bootstrap"].values():
+        assert summary["dist"].shape == (0,)
+        assert np.isnan([summary["mean"], summary["se"], *summary["ci"]]).all()

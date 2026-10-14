@@ -230,6 +230,11 @@ def _bootstrap(
     """
     point = _single_run_score(df, x, y, start_value, end_value, p, q, score_type, dropna, kernel, formula)
     public_keys = [k for k in point if k != "type" and not k.startswith("_")]
+    if B == 0:  # point estimates only; the bootstrap summaries are undefined
+        return point, {
+            k: {"mean": np.nan, "se": np.nan, "ci": [np.nan, np.nan], "dist": np.empty(0)}
+            for k in public_keys
+        }
 
     # Listwise deletion happens once, before resampling: every replicate
     # redraws the n respondents the point estimate counts, so each replicate
@@ -337,7 +342,8 @@ def calculate_scores(
         Whether to drop NaN values before scoring (currently informational;
         both columns are always dropna'd via alignment).
     B : int, default 2000
-        Number of bootstrap replications.
+        Number of bootstrap replications.  ``0`` skips the bootstrap: point
+        estimates are returned and every bootstrap summary is NaN.
     ci : float, default 0.95
         Confidence level for the bootstrap interval.
     random_state : int or None, default 42
