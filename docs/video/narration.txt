@@ -1,0 +1,19 @@
+Two camps, one table. Here is how the bipolarization method measures polarization.
+
+[pause] Most polarization measures read one question at a time. But polarization is about pairs: people who warm to one party while rejecting another. Two survey items can have identical answer distributions… and still hide completely opposite camps.
+
+[pause] So the method starts from the joint table. Each respondent rates both items on a scale from zero to ten, and lands in one cell of an eleven-by-eleven table. The diagonal holds people who rate both the same. Below it sit those who prefer X; above it, those who prefer Y.
+
+[pause] Every cell then gets a weight, built from two terms. Distance: how far apart the two ratings are. And agreement: how symmetrically the pair sits around the midpoint of the scale. Multiply them, and the weight peaks in the two far corners. A five-point gap that straddles the midpoint counts almost twice as much as one confined to half of the scale.
+
+A kernel can bend how quickly weight grows with distance, and a final rescaling keeps every weight between minus one and one.
+
+[pause] Next, divide every count by the same total, so the table becomes a probability distribution. Multiply it, cell by cell, with the weights, and add up each triangle. That gives one score for the camp that prefers X, one for the camp that prefers Y, and their sum: the overall polarization score. For the AKP and CHP pair in the 2024 Turkey General Social Survey, the two extreme corners alone supply more than half of that score.
+
+[pause] But a camp can score high simply by being large. Dividing each score by the camp's share of the sample gives a per-person score: the average weight one member carries. For AKP and CHP, the raw scores differ… yet per person, the two camps are almost identical.
+
+[pause] Swap the main diagonal for the anti-diagonal, and the same machinery measures consensus: shared warmth, or shared rejection, of both items.
+
+[pause] Finally, uncertainty. Resample whole respondents with replacement, two thousand times, rerun everything, and read standard errors and percentile intervals straight from the replicates.
+
+[pause] One table, one weight matrix, and scores that separate how many people disagree from how strongly they do. The method is available as the bipolarization package for Python, with a port for R.

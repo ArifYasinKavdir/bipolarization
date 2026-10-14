@@ -1,0 +1,703 @@
+<div id="app" data-lang="en">
+<header id="bar">
+  <div class="wrap">
+    <a class="brand" href="#hero">bi<b>polar</b>ization<span lang="en"> · step by step</span><span lang="tr"> · adım adım</span></a>
+    <nav id="toc" aria-label="Chapters">
+      <ol>
+        <li><a href="#ch-problem"><span class="n">1</span><span lang="en">Problem</span><span lang="tr">Sorun</span></a></li>
+        <li><a href="#ch-table"><span class="n">2</span><span lang="en">Joint table</span><span lang="tr">Ortak tablo</span></a></li>
+        <li><a href="#ch-weights"><span class="n">3</span><span lang="en">Weights</span><span lang="tr">Ağırlıklar</span></a></li>
+        <li><a href="#ch-kernels"><span class="n">4</span><span lang="en">Kernels</span><span lang="tr">Çekirdekler</span></a></li>
+        <li><a href="#ch-prob"><span class="n">5</span><span lang="en">Probabilities</span><span lang="tr">Olasılıklar</span></a></li>
+        <li><a href="#ch-scores"><span class="n">6</span><span lang="en">Scores</span><span lang="tr">Skorlar</span></a></li>
+        <li><a href="#ch-size"><span class="n">7</span><span lang="en">Per person</span><span lang="tr">Kişi başı</span></a></li>
+        <li><a href="#ch-consensus"><span class="n">8</span><span lang="en">Consensus</span><span lang="tr">Uzlaşı</span></a></li>
+        <li><a href="#ch-boot"><span class="n">9</span>Bootstrap</a></li>
+        <li><a href="#ch-results"><span class="n">10</span><span lang="en">Results</span><span lang="tr">Bulgular</span></a></li>
+        <li><a href="#ch-recipe"><span class="n">11</span><span lang="en">Recipe</span><span lang="tr">Özet</span></a></li>
+      </ol>
+    </nav>
+    <div class="lang" role="group" aria-label="Language / Dil">
+      <button type="button" id="lang-en" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" id="lang-tr" data-lang="tr" aria-pressed="false">TR</button>
+    </div>
+  </div>
+</header>
+
+<main>
+<!-- =============================== HERO =============================== -->
+<section id="hero">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow"><span lang="en">An animated guide to the bipolarization method</span><span lang="tr">Bipolarization yöntemine animasyonlu bir rehber</span></div>
+      <h1><span lang="en">Two camps,<br>one table</span><span lang="tr">İki kamp,<br>tek tablo</span></h1>
+      <p class="lede" lang="en">Most polarization indices read one distribution at a time. This method reads the joint table of two survey items and asks where in that table the disagreement sits. Step through the equations below. Every number on this page is recomputed in your browser.</p>
+      <p class="lede" lang="tr">Kutuplaşma endekslerinin çoğu dağılımları tek tek okur. Bu yöntem iki anket maddesinin ortak tablosunu okur ve anlaşmazlığın bu tablonun neresinde durduğunu sorar. Aşağıdaki denklemleri adım adım izleyin. Bu sayfadaki her sayı tarayıcınızda yeniden hesaplanır.</p>
+      <div class="hero-cta">
+        <a class="btn primary" href="#ch-problem"><span lang="en">Start with the problem</span><span lang="tr">Sorunla başlayın</span> ↓</a>
+        <a class="btn" href="#ch-recipe"><span lang="en">Skip to the recipe</span><span lang="tr">Özete atlayın</span></a>
+      </div>
+    </div>
+    <figure class="hero-fig" style="margin:0">
+      <canvas id="heroCanvas" role="img" aria-label="Animated dot plot: 2,218 simulated respondents fall into an 11 by 11 table of AKP and CHP ratings; two opposite corners fill up."></canvas>
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-top:10px">
+        <div class="legend">
+          <span><i class="sw x"></i><span lang="en">rates AKP higher</span><span lang="tr">AKP'ye daha yakın</span></span>
+          <span><i class="sw y"></i><span lang="en">rates CHP higher</span><span lang="tr">CHP'ye daha yakın</span></span>
+          <span><i class="sw d"></i><span lang="en">rates both the same</span><span lang="tr">ikisine eşit</span></span>
+        </div>
+        <button type="button" class="btn" id="heroReplay"><svg viewBox="0 0 16 16"><path d="M8 2a6 6 0 1 0 6 6h-2a4 4 0 1 1-1.2-2.8L8.5 7.5H14V2l-1.8 1.8A6 6 0 0 0 8 2z"/></svg><span lang="en">Replay</span><span lang="tr">Tekrar</span></button>
+      </div>
+      <figcaption>
+        <span lang="en">Each dot is one respondent in a <b>simulated</b> AKP × CHP sample (n = 2,218), dropped into the cell of their two 0–10 ratings. The two filled corners are the opposed camps the method is built to detect.</span>
+        <span lang="tr">Her nokta, <b>simüle edilmiş</b> bir AKP × CHP örnekleminde (n = 2.218) bir katılımcıdır ve 0–10 arası iki puanının kesiştiği hücreye düşer. Dolan iki köşe, yöntemin yakalamak için kurulduğu karşıt kamplardır.</span>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- =============================== 1 PROBLEM =============================== -->
+<section class="chapter" id="ch-problem">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§1.4 · <span lang="en">Why a joint table</span><span lang="tr">Neden ortak tablo</span></div>
+      <h2><span lang="en">Marginals can't see camps</span><span lang="tr">Marjinal dağılımlar kampları göremez</span></h2>
+      <p class="lede" lang="en">Two items can have identical answer distributions while their respondents pair up in opposite ways. Any index computed from each item on its own returns the same number in both cases.</p>
+      <p class="lede" lang="tr">İki maddenin yanıt dağılımları birebir aynı olabilir; katılımcılar bu yanıtları yine de tam ters biçimlerde eşleştirebilir. Her maddeden ayrı ayrı hesaplanan bir endeks iki durumda da aynı sayıyı verir.</p>
+    </div>
+    <div class="ch-body">
+      <ol class="steps" data-chapter="problem">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Freeze each item's answers</span><span lang="tr">Her maddenin yanıtlarını sabitleyin</span></button></h3>
+          <p lang="en">Both items use a 0–10 like–dislike scale. The grey bars show the share of respondents at each point: a big pile at 0 and a second bump at 10. These two distributions stay fixed for the whole chapter.</p>
+          <p lang="tr">İki madde de 0–10 arası sevme–sevmeme ölçeğinde. Gri çubuklar her puandaki katılımcı payını gösteriyor: 0'da büyük bir yığın, 10'da ikinci bir tepe. Bu iki dağılım bölüm boyunca hiç değişmiyor.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Pair them up as allies</span><span lang="tr">Müttefik gibi eşleştirin</span></button></h3>
+          <p lang="en">Everyone who rates X high also rates Y high. All mass lies on the diagonal, where the two ratings agree, and \(S_{\text{pol}} = 0\).</p>
+          <p lang="tr">X'e yüksek puan veren herkes Y'ye de yüksek puan veriyor. Bütün kütle iki puanın eşit olduğu köşegende durur ve \(S_{\text{pol}} = 0\) olur.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Now pair them as opponents</span><span lang="tr">Şimdi rakip gibi eşleştirin</span></button></h3>
+          <p lang="en">Same bars, but now whoever likes X rejects Y. Mass moves to the off-diagonal corners and \(S_{\text{pol}}\) jumps. The mean and standard deviation of each item have not moved at all.</p>
+          <p lang="tr">Çubuklar aynı, ama bu kez X'i seven Y'yi reddediyor. Kütle köşegen dışındaki köşelere kayar ve \(S_{\text{pol}}\) sıçrar. Her maddenin ortalaması ve standart sapması hiç kıpırdamadı.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">So: work on the joint table</span><span lang="tr">Öyleyse: ortak tabloyla çalışın</span></button></h3>
+          <p lang="en">The method's input is the \((N+1)\times(N+1)\) table of a pair of items, not either margin. It also needs no vote shares or party IDs. Drag the slider to try any coupling between the two extremes.</p>
+          <p lang="tr">Yöntemin girdisi, maddelerin tek tek marjinalleri değil, iki maddenin \((N+1)\times(N+1)\) ortak tablosudur. Oy oranına ya da parti kimliğine de ihtiyaç duymaz. İki uç arasındaki her eşleşmeyi denemek için kaydırıcıyı sürükleyin.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="problem">
+        <div class="stage-main">
+          <div class="fig-title"><span lang="en">Joint table of X and Y with both margins</span><span lang="tr">X ve Y'nin ortak tablosu ve iki marjinal</span></div>
+          <div id="probFig"></div>
+          <div class="ctl">
+            <label for="coupling"><span><span lang="en">How do the two ratings pair up?</span><span lang="tr">İki puan nasıl eşleşiyor?</span></span><output id="couplingOut">0.00</output></label>
+            <input type="range" id="coupling" min="-1" max="1" step="0.01" value="0">
+            <div class="scale-ends"><span lang="en">opposed</span><span lang="tr">karşıt</span><span lang="en">independent</span><span lang="tr">bağımsız</span><span lang="en">aligned</span><span lang="tr">uyumlu</span></div>
+          </div>
+          <div class="readouts" id="probRO"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 2 JOINT TABLE =============================== -->
+<section class="chapter" id="ch-table">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.1 · <span lang="en">Data structure and notation</span><span lang="tr">Veri yapısı ve gösterim</span></div>
+      <h2><span lang="en">Tally the answer pairs into a table</span><span lang="tr">Yanıt çiftlerini bir tabloya sayın</span></h2>
+      <p class="lede" lang="en">From here on we follow a toy survey: 20 respondents rate two items, X and Y, on a 0–4 scale. It is small enough to check every number by hand.</p>
+      <p class="lede" lang="tr">Bundan sonra bir oyuncak anketi izliyoruz: 20 katılımcı X ve Y maddelerini 0–4 ölçeğinde puanlıyor. Her sayıyı elle kontrol edebileceğiniz kadar küçük.</p>
+    </div>
+    <div class="ch-body">
+      <ol class="steps" data-chapter="table">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Fix the scale</span><span lang="tr">Ölçeği belirleyin</span></button></h3>
+          <div class="math">\[\begin{aligned}\mathcal{S}&=\{s_0,\,s_0+1,\,\dots,\,s_0+N\}\\ N&=s_{\max}-s_0\end{aligned}\]</div>
+          <p lang="en">Here \(s_0=0\) and \(N=4\). Index \(i\) is the position of a respondent's X rating and \(j\) of their Y rating, with \(i,j\in\{0,\dots,N\}\).</p>
+          <p lang="tr">Burada \(s_0=0\) ve \(N=4\). \(i\) indeksi katılımcının X puanının, \(j\) ise Y puanının konumudur; \(i,j\in\{0,\dots,N\}\).</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Count every pair</span><span lang="tr">Her çifti sayın</span></button></h3>
+          <div class="math">\[\begin{aligned}a_{ij}&=\#\{k:\ x_k=s_0+i,\ y_k=s_0+j\}\\ n&=\sum_{i=0}^{N}\sum_{j=0}^{N}a_{ij}=20\end{aligned}\]</div>
+          <p lang="en">Each respondent drops into exactly one cell of the count matrix \(\mathbf{A}\). Anyone missing either rating is removed before tabulation (listwise deletion).</p>
+          <p lang="tr">Her katılımcı, sayım matrisi \(\mathbf{A}\)'nın tam olarak bir hücresine düşer. İki puandan biri eksik olanlar tablolamadan önce çıkarılır (liste bazında silme).</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Three regions for polarization</span><span lang="tr">Kutuplaşma için üç bölge</span></button></h3>
+          <p lang="en"><b>Main diagonal</b> \(i=j\): rated both the same, the agreement axis. <b>Lower triangle</b> \(i&gt;j\): rated X higher, the <i>X-leaning</i> group. <b>Upper triangle</b> \(i&lt;j\): rated Y higher, the <i>Y-leaning</i> group.</p>
+          <p lang="tr"><b>Ana köşegen</b> \(i=j\): ikisine aynı puanı verenler, uzlaşma ekseni. <b>Alt üçgen</b> \(i&gt;j\): X'e daha yüksek puan verenler, <i>X'e yakın</i> grup. <b>Üst üçgen</b> \(i&lt;j\): Y'ye daha yüksek puan verenler, <i>Y'ye yakın</i> grup.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Three regions for consensus</span><span lang="tr">Uzlaşı için üç bölge</span></button></h3>
+          <p lang="en">Swap the main diagonal for the <b>anti-diagonal</b> \(i+j=N\): pairs whose ratings sum to the midpoint. Above it, \(i+j&lt;N\), both ratings are low; below it, \(i+j&gt;N\), both are high.</p>
+          <p lang="tr">Ana köşegenin yerine <b>ters köşegeni</b> koyun: \(i+j=N\), puanları toplamı orta noktaya eşit olan çiftler. Üstünde \(i+j&lt;N\) iki puan da düşük; altında \(i+j&gt;N\) iki puan da yüksek.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="table">
+        <div class="stage-main">
+          <div class="fig-title"><span lang="en">20 toy respondents → count matrix A</span><span lang="tr">20 oyuncak katılımcı → sayım matrisi A</span></div>
+          <div class="tokens" id="toyTokens" aria-label="Respondents"></div>
+          <div id="tableFig" style="max-width:420px;width:100%;justify-self:center"></div>
+          <div class="readouts" id="tableRO"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 3 WEIGHTS =============================== -->
+<section class="chapter" id="ch-weights">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.2.1 · <span lang="en">Eq. 8–12</span><span lang="tr">Denk. 8–12</span></div>
+      <h2><span lang="en">Weigh each cell by distance and position</span><span lang="tr">Her hücreyi uzaklık ve konumla ağırlıklandırın</span></h2>
+      <p class="lede" lang="en">Every cell gets a weight built from two normalised terms: how far apart its two ratings are, and where the cell sits relative to the structural axis of the table.</p>
+      <p class="lede" lang="tr">Her hücre, normalize edilmiş iki terimden kurulan bir ağırlık alır: iki puanın birbirinden ne kadar uzak olduğu ve hücrenin tablonun yapısal eksenine göre nerede durduğu.</p>
+    </div>
+    <div class="ch-body">
+      <ol class="steps" data-chapter="weights">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Distance term</span><span lang="tr">Uzaklık terimi</span></button><span class="eq">(8)</span></h3>
+          <div class="math">\[d^{\text{pol}}_{ij}=\frac{|i-j|}{N}\]</div>
+          <p lang="en">0 on the diagonal, 1 in the two far corners \((0,N)\) and \((N,0)\), where one rating is the lowest and the other the highest.</p>
+          <p lang="tr">Köşegende 0, bir puanın en düşük diğerinin en yüksek olduğu iki uç köşede, \((0,N)\) ve \((N,0)\), 1 olur.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Agreement term</span><span lang="tr">Uyum terimi</span></button><span class="eq">(9)</span></h3>
+          <div class="math">\[a^{\text{pol}}_{ij}=1-\frac{|(i+j)-N|}{N}\]</div>
+          <p lang="en">1 on the anti-diagonal \(i+j=N\), where the two ratings sit symmetrically around the scale midpoint: the most opposed configuration. It falls to 0 at \((0,0)\) and \((N,N)\).</p>
+          <p lang="tr">Ters köşegende, \(i+j=N\), 1 olur: iki puan ölçeğin orta noktası etrafında simetriktir, yani en karşıt yapılanma. \((0,0)\) ve \((N,N)\)'de 0'a düşer.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Multiply them</span><span lang="tr">Çarpın</span></button><span class="eq">(12), p = q = 1</span></h3>
+          <div class="math">\[m_{ij}=d_{ij}\cdot a_{ij}\]</div>
+          <p lang="en">Same distance, different weight. On the 0–10 scale the cells \((0,5)\), \((3,8)\) and \((5,10)\) are all five points apart, yet they get 0.25, 0.45 and 0.25. A disagreement that straddles the midpoint counts about 1.8 times as much as one confined to half the scale.</p>
+          <p lang="tr">Aynı uzaklık, farklı ağırlık. 0–10 ölçeğinde \((0,5)\), \((3,8)\) ve \((5,10)\) hücrelerinin hepsi beş puan aralıklıdır, ama 0,25, 0,45 ve 0,25 ağırlık alır. Orta noktanın iki yanına yayılan bir anlaşmazlık, ölçeğin yarısına sıkışmış olandan yaklaşık 1,8 kat fazla sayılır.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">The consensus geometry</span><span lang="tr">Uzlaşı geometrisi</span></button><span class="eq">(10–11)</span></h3>
+          <div class="math">\[d^{\text{con}}_{ij}=\frac{i+j}{N}-1\qquad a^{\text{con}}_{ij}=\frac{N-|i-j|}{N}\]</div>
+          <p lang="en">Now the distance is signed: negative when both ratings are low, positive when both are high. Agreement peaks on the main diagonal. Their product runs from −1 at \((0,0)\) to +1 at \((N,N)\) and is exactly 0 on the anti-diagonal.</p>
+          <p lang="tr">Artık uzaklık işaretlidir: iki puan da düşükse negatif, ikisi de yüksekse pozitif. Uyum ana köşegende en yüksektir. Çarpımları \((0,0)\)'da −1'den \((N,N)\)'de +1'e uzanır ve ters köşegende tam olarak 0'dır.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="weights">
+        <div class="stage-main">
+          <div class="ctl-row">
+            <div class="seg" id="wGeom" role="group" aria-label="Geometry">
+              <button type="button" data-v="pol" aria-pressed="true"><span lang="en">Polarization</span><span lang="tr">Kutuplaşma</span></button>
+              <button type="button" data-v="con" aria-pressed="false"><span lang="en">Consensus</span><span lang="tr">Uzlaşı</span></button>
+            </div>
+            <div class="seg" id="wN" role="group" aria-label="Scale">
+              <button type="button" data-v="4" aria-pressed="true">N = 4</button>
+              <button type="button" data-v="10" aria-pressed="false">N = 10</button>
+            </div>
+          </div>
+          <div class="trio-scroll"><div class="trio" id="wTrio"></div></div>
+          <div class="trio-hint"><span lang="en">Swipe sideways to see all three matrices →</span><span lang="tr">Üç matrisi de görmek için yana kaydırın →</span></div>
+          <div class="inspector" id="wInspect"></div>
+          <div class="caption" id="wCap"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 4 KERNELS =============================== -->
+<section class="chapter" id="ch-kernels">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.2.2–2.2.3 · <span lang="en">Eq. 12–15</span><span lang="tr">Denk. 12–15</span></div>
+      <h2><span lang="en">Bend the distance curve</span><span lang="tr">Uzaklık eğrisini bükün</span></h2>
+      <p class="lede" lang="en">The kernel decides how fast weight grows with distance. Two families are available, and a final rescaling makes them comparable. This chapter is a playground: every control recomputes the 11 × 11 polarization matrix.</p>
+      <p class="lede" lang="tr">Çekirdek, ağırlığın uzaklıkla ne hızla büyüdüğünü belirler. İki aile vardır ve son bir yeniden ölçekleme onları karşılaştırılabilir kılar. Bu bölüm bir deney alanı: her kontrol 11 × 11 kutuplaşma matrisini yeniden hesaplar.</p>
+    </div>
+    <div class="ch-body wide">
+      <ol class="steps" data-chapter="kernels">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Power kernel</span><span lang="tr">Kuvvet çekirdeği</span></button><span class="eq">(12)</span></h3>
+          <div class="math">\[m^{\text{pow}}_{ij}=d_{ij}^{\,p}\cdot a_{ij}^{\,q},\qquad p&gt;0,\ q\ge 0\]</div>
+          <p lang="en">\(p&lt;1\) gives a concave curve: moderate disagreements already weigh a lot. \(p&gt;1\) gives a convex curve that keeps high weights for extreme disagreements only.</p>
+          <p lang="tr">\(p&lt;1\) iç bükey bir eğri verir: orta düzey anlaşmazlıklar da yüksek ağırlık alır. \(p&gt;1\) ise yüksek ağırlıkları yalnızca uç anlaşmazlıklara ayıran dış bükey bir eğri verir.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Agreement exponent</span><span lang="tr">Uyum üssü</span></button><span class="eq">q</span></h3>
+          <p lang="en">\(q\) sets how strongly the cell's position matters. \(q=0\) switches the agreement term off, since \(a^0=1\), so only distance counts. Larger \(q\) concentrates weight near the anti-diagonal.</p>
+          <p lang="tr">\(q\), hücrenin konumunun ne kadar önemli olduğunu belirler. \(q=0\) uyum terimini kapatır, çünkü \(a^0=1\); yalnızca uzaklık sayılır. Daha büyük \(q\) ağırlığı ters köşegenin çevresinde toplar.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Gaussian kernel</span><span lang="tr">Gauss çekirdeği</span></button><span class="eq">(13–14)</span></h3>
+          <div class="math">\[\begin{aligned}g_{ij}&=\Bigl(1-e^{-d_{ij}^2/2\sigma^2}\Bigr)\operatorname{sign}(d_{ij})\\ m^{\text{gauss}}_{ij}&=g_{ij}\cdot a_{ij}^{\,q}\end{aligned}\]</div>
+          <p lang="en">An S-shaped curve with its bend near \(d=\sigma\). A small \(\sigma\) makes a sharp threshold: cells just off the diagonal get almost nothing, cells beyond \(\sigma\) get almost everything.</p>
+          <p lang="tr">Kıvrımı \(d=\sigma\) civarında olan S biçimli bir eğri. Küçük \(\sigma\) keskin bir eşik yaratır: köşegene çok yakın hücreler neredeyse hiç ağırlık almaz, \(\sigma\)'nın ötesindekiler neredeyse tam ağırlık alır.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Normalise</span><span lang="tr">Normalize edin</span></button><span class="eq">(15)</span></h3>
+          <div class="math">\[w_{ij}=\frac{m_{ij}}{\max_{i',j'}|m_{i'j'}|}\]</div>
+          <p lang="en">For the power kernel the largest raw weight is already 1, at the corners, so this step changes nothing. For the Gaussian kernel it is \(1-e^{-1/2\sigma^2}\): 0.9997, 0.8647 and 0.3935 at \(\sigma=\) 0.25, 0.5 and 1. Dividing by it puts \(\mathbf{W}\) on \([-1,1]\) whatever the kernel.</p>
+          <p lang="tr">Kuvvet çekirdeğinde en büyük ham ağırlık zaten köşelerde 1'dir; bu adım hiçbir şeyi değiştirmez. Gauss çekirdeğinde bu değer \(1-e^{-1/2\sigma^2}\)'dir: \(\sigma=\) 0,25, 0,5 ve 1 için 0,9997, 0,8647 ve 0,3935. Buna bölmek, çekirdek ne olursa olsun \(\mathbf{W}\)'yi \([-1,1]\) aralığına yerleştirir.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="kernels">
+        <div class="stage-main">
+          <div class="ctl-row">
+            <div class="seg" id="kKernel" role="group" aria-label="Kernel">
+              <button type="button" data-v="power" aria-pressed="true"><span lang="en">Power</span><span lang="tr">Kuvvet</span></button>
+              <button type="button" data-v="gaussian" aria-pressed="false"><span lang="en">Gaussian</span><span lang="tr">Gauss</span></button>
+            </div>
+          </div>
+          <div class="ctl-row">
+            <div class="ctl" id="kPctl"><label for="kP"><span>p</span><output id="kPout">1.00</output></label><input type="range" id="kP" min="0.25" max="3" step="0.05" value="1"></div>
+            <div class="ctl" id="kSctl" hidden><label for="kS"><span>σ</span><output id="kSout">0.50</output></label><input type="range" id="kS" min="0.1" max="1.5" step="0.05" value="0.5"></div>
+            <div class="ctl"><label for="kQ"><span>q</span><output id="kQout">1.00</output></label><input type="range" id="kQ" min="0" max="3" step="0.25" value="1"></div>
+          </div>
+          <div class="ctl"><span class="lbl"><span lang="en">Specifications from the paper's Table 6</span><span lang="tr">Makalenin Tablo 6'sındaki tanımlar</span></span><div class="chips" id="kPresets"></div></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:start">
+            <div><div class="fig-title"><span lang="en">Distance part of the kernel</span><span lang="tr">Çekirdeğin uzaklık kısmı</span></div><div id="kCurve"></div></div>
+            <div><div class="fig-title"><span lang="en">Normalised weights W (N = 10)</span><span lang="tr">Normalize ağırlıklar W (N = 10)</span></div><div id="kMatrix"></div></div>
+          </div>
+          <div class="readouts" id="kRO"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 5 PROBABILITIES =============================== -->
+<section class="chapter" id="ch-prob">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.3 · <span lang="en">Eq. 16</span><span lang="tr">Denk. 16</span></div>
+      <h2><span lang="en">One table, one denominator</span><span lang="tr">Tek tablo, tek payda</span></h2>
+      <p class="lede" lang="en">Counts become probabilities by dividing every cell by the same \(n\). That single choice is what lets a camp's size show up in its score.</p>
+      <p class="lede" lang="tr">Her hücre aynı \(n\)'ye bölünerek sayılar olasılığa dönüşür. Bir kampın büyüklüğünün skoruna yansımasını sağlayan şey bu tek seçimdir.</p>
+    </div>
+    <div class="ch-body">
+      <ol class="steps" data-chapter="prob">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Divide by n</span><span lang="tr">n'ye bölün</span></button><span class="eq">(16)</span></h3>
+          <div class="math">\[p_{ij}=\frac{a_{ij}}{n},\qquad n=\sum_{i'=0}^{N}\sum_{j'=0}^{N}a_{i'j'}\]</div>
+          <p lang="en">With \(n=20\), each respondent is worth \(1/20 = 0.05\). Cell \((0,4)\) holds 4 respondents, so \(p_{0,4}=0.20\).</p>
+          <p lang="tr">\(n=20\) iken her katılımcı \(1/20 = 0{,}05\) değerindedir. \((0,4)\) hücresinde 4 katılımcı var, yani \(p_{0,4}=0{,}20\).</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">The regions share 100%</span><span lang="tr">Bölgeler %100'ü paylaşır</span></button></h3>
+          <div class="math">\[\sum_{i,j}p_{ij}=1\]</div>
+          <p lang="en">Diagonal 35%, Y-leaning 35%, X-leaning 30%. \(\mathbf{P}\) is the empirical joint distribution of \((X,Y)\), and the two triangles together hold 65% of the sample.</p>
+          <p lang="tr">Köşegen %35, Y'ye yakın %35, X'e yakın %30. \(\mathbf{P}\), \((X,Y)\)'nin ampirik ortak dağılımıdır ve iki üçgen birlikte örneklemin %65'ini tutar.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Why not normalise each triangle?</span><span lang="tr">Neden her üçgeni ayrı normalize etmiyoruz?</span></button></h3>
+          <p lang="en">If each triangle were divided by its own total, both would sum to 1. A camp of 2 people would then score like a camp of 2,000. Global normalisation keeps each camp's share of the whole sample inside its score, so the two triangle scores are directly comparable.</p>
+          <p lang="tr">Her üçgen kendi toplamına bölünseydi ikisi de 1'e toplanırdı. O zaman 2 kişilik bir kamp 2.000 kişilik bir kamp gibi skor alırdı. Genel normalizasyon, her kampın tüm örneklemdeki payını skorunun içinde tutar; böylece iki üçgen skoru doğrudan karşılaştırılabilir.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="prob">
+        <div class="stage-main">
+          <div class="ctl-row">
+            <div class="seg" id="pMode" role="group" aria-label="Normalisation">
+              <button type="button" data-v="global" aria-pressed="true"><span lang="en">Global (paper)</span><span lang="tr">Genel (makale)</span></button>
+              <button type="button" data-v="tri" aria-pressed="false"><span lang="en">Per triangle</span><span lang="tr">Üçgen başına</span></button>
+            </div>
+          </div>
+          <div id="probMx" style="max-width:400px;width:100%;justify-self:center"></div>
+          <div><div class="fig-title" id="pBarTitle"></div><div id="probBar"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 6 SCORES =============================== -->
+<section class="chapter" id="ch-scores">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.4.1 · <span lang="en">Eq. 17–20</span><span lang="tr">Denk. 17–20</span></div>
+      <h2><span lang="en">Multiply, then sum each triangle</span><span lang="tr">Çarpın, sonra her üçgeni toplayın</span></h2>
+      <p class="lede" lang="en">Weights and probabilities meet cell by cell. For the toy scale every weight is a whole number of sixteenths and every probability a whole number of twentieths, so the matrices below show integers and you can redo each sum by hand.</p>
+      <p class="lede" lang="tr">Ağırlıklar ve olasılıklar hücre hücre buluşur. Oyuncak ölçekte her ağırlık on altıda birlerin, her olasılık yirmide birlerin tam katıdır; bu yüzden aşağıdaki matrisler tamsayı gösterir ve her toplamı elle yeniden yapabilirsiniz.</p>
+    </div>
+    <div class="ch-body wide">
+      <ol class="steps" data-chapter="scores">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Hadamard product</span><span lang="tr">Hadamard çarpımı</span></button><span class="eq">(17)</span></h3>
+          <div class="math">\[\mathbf{WP}=\mathbf{W}\circ\mathbf{P},\qquad \mathrm{WP}_{ij}=w_{ij}\,p_{ij}\]</div>
+          <p lang="en">Element-wise, not a matrix product. Cell \((0,4)\): \(w=16/16=1\) and \(p=4/20\), so \(\mathrm{WP}_{0,4}=64/320=0.20\). Diagonal cells have \(w=0\) and drop out.</p>
+          <p lang="tr">Matris çarpımı değil, eleman bazında çarpım. \((0,4)\) hücresi: \(w=16/16=1\) ve \(p=4/20\), yani \(\mathrm{WP}_{0,4}=64/320=0{,}20\). Köşegen hücrelerinde \(w=0\) olduğundan düşerler.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">X-leaning score</span><span lang="tr">X'e yakın grubun skoru</span></button><span class="eq">(18)</span></h3>
+          <div class="math">\[\begin{aligned}S_X&=\sum_{i&gt;j}\mathrm{WP}_{ij}\\&=\frac{4+9+8+48}{320}\\&=\frac{69}{320}=0.215625\end{aligned}\]</div>
+          <p lang="en">The four occupied cells below the diagonal: \((2,0)\) \(4\times1\), \((3,0)\) \(9\times1\), \((3,1)\) \(8\times1\) and \((4,0)\) \(16\times3\), in units of 1/320.</p>
+          <p lang="tr">Köşegenin altındaki dört dolu hücre: \((2,0)\) \(4\times1\), \((3,0)\) \(9\times1\), \((3,1)\) \(8\times1\) ve \((4,0)\) \(16\times3\); birim 1/320.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Y-leaning score</span><span lang="tr">Y'ye yakın grubun skoru</span></button><span class="eq">(19)</span></h3>
+          <div class="math">\[\begin{aligned}S_Y&=\sum_{i&lt;j}\mathrm{WP}_{ij}\\&=\frac{4+9+64+8}{320}\\&=\frac{85}{320}=0.265625\end{aligned}\]</div>
+          <p lang="en">Cells \((0,2)\), \((0,3)\), \((0,4)\) and \((1,3)\). The corner \((0,4)\) alone contributes 64 of the 85.</p>
+          <p lang="tr">\((0,2)\), \((0,3)\), \((0,4)\) ve \((1,3)\) hücreleri. Tek başına \((0,4)\) köşesi 85'in 64'ünü getirir.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Overall bipolarization</span><span lang="tr">Genel iki kutupluluk</span></button><span class="eq">(20)</span></h3>
+          <div class="math">\[\begin{aligned}S_{\text{pol}}&=\sum_{i\neq j}\mathrm{WP}_{ij}=S_X+S_Y\\&=\frac{154}{320}=0.48125\end{aligned}\]</div>
+          <p lang="en">\(S_X\) measures how far respondents who rate X higher form a distinct, internally cohesive group, weighted by that group's share of the sample. \(S_Y\) is the mirror image.</p>
+          <p lang="tr">\(S_X\), X'e daha yüksek puan verenlerin ne ölçüde ayrı ve kendi içinde tutarlı bir grup oluşturduğunu, bu grubun örneklemdeki payıyla ağırlıklandırarak ölçer. \(S_Y\) bunun ayna görüntüsüdür.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="scores">
+        <div class="stage-main">
+          <div class="trio-scroll"><div class="trio" id="sTrio"></div></div>
+          <div class="trio-hint"><span lang="en">Swipe sideways to see all three matrices →</span><span lang="tr">Üç matrisi de görmek için yana kaydırın →</span></div>
+          <div class="sumline" id="sSum"></div>
+          <div id="sBars"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 7 PER PERSON =============================== -->
+<section class="chapter" id="ch-size">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.4.1 · <span lang="en">Eq. 21–22</span><span lang="tr">Denk. 21–22</span></div>
+      <h2><span lang="en">Separate how many from how strongly</span><span lang="tr">Kaç kişi olduğunu ne kadar güçlü olduğundan ayırın</span></h2>
+      <p class="lede" lang="en">A camp can score high because it is large, or because its members sit in heavily weighted cells. Per-person scores pull the two apart.</p>
+      <p class="lede" lang="tr">Bir kamp kalabalık olduğu için de yüksek skor alabilir, üyeleri ağır ağırlıklı hücrelerde durduğu için de. Kişi başı skorlar bu ikisini birbirinden ayırır.</p>
+    </div>
+    <div class="ch-body">
+      <ol class="steps" data-chapter="size">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Group shares</span><span lang="tr">Grup payları</span></button></h3>
+          <div class="math">\[\begin{aligned}n_X&=\sum_{i&gt;j}a_{ij},&\quad \pi_X&=100\,\frac{n_X}{n}\\ n_Y&=\sum_{i&lt;j}a_{ij},&\quad \pi_Y&=100\,\frac{n_Y}{n}\end{aligned}\]</div>
+          <p lang="en">Toy: \(n_X=6\), so \(\pi_X=30\); \(n_Y=7\), so \(\pi_Y=35\). The shares are percentages, not fractions.</p>
+          <p lang="tr">Oyuncak örnek: \(n_X=6\), dolayısıyla \(\pi_X=30\); \(n_Y=7\), dolayısıyla \(\pi_Y=35\). Paylar kesir değil, yüzdedir.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Per-person scores</span><span lang="tr">Kişi başı skorlar</span></button><span class="eq">(21–22)</span></h3>
+          <div class="math">\[\begin{aligned}S^*_X&=\frac{S_X}{\pi_X}=\frac{0.215625}{30}=7.19\times10^{-3}\\ S^*_Y&=\frac{S_Y}{\pi_Y}=\frac{0.265625}{35}=7.59\times10^{-3}\end{aligned}\]</div>
+          <p lang="en">The raw gap \(S_Y-S_X=0.050\) shrinks to \(0.40\times10^{-3}\) per person.</p>
+          <p lang="tr">Ham fark \(S_Y-S_X=0{,}050\), kişi başına \(0{,}40\times10^{-3}\)'e iner.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">What S* really is</span><span lang="tr">S* aslında nedir</span></button></h3>
+          <div class="math">\[\begin{aligned}S^*_X&=\frac{\sum_{i&gt;j}w_{ij}\,a_{ij}/n}{100\,n_X/n}\\&=\frac{1}{100}\cdot\frac{\sum_{i&gt;j}w_{ij}\,a_{ij}}{n_X}\end{aligned}\]</div>
+          <p lang="en">The sample size \(n\) cancels. \(S^*_X\) is the average weight carried by one X-leaning respondent, divided by 100, so it does not depend on how many such respondents there are.</p>
+          <p lang="tr">Örneklem büyüklüğü \(n\) sadeleşir. \(S^*_X\), X'e yakın bir katılımcının taşıdığı ortalama ağırlığın 100'e bölümüdür; dolayısıyla bu katılımcılardan kaç tane olduğuna bağlı değildir.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Grow one camp</span><span lang="tr">Bir kampı büyütün</span></button></h3>
+          <p lang="en">The slider clones the Y-leaning respondents, keeping their pattern. Raw \(S_Y\) climbs (and \(S_X\) falls, because \(n\) grows), while both per-person scores stay flat.</p>
+          <p lang="tr">Kaydırıcı, Y'ye yakın katılımcıları aynı örüntüyle çoğaltır. Ham \(S_Y\) yükselir (ve \(n\) büyüdüğü için \(S_X\) düşer); iki kişi başı skor ise yerinden oynamaz.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">In the paper: AKP × CHP</span><span lang="tr">Makalede: AKP × CHP</span></button></h3>
+          <p lang="en">The raw difference \(S_X-S_Y=-0.053\), 95% CI \([-0.078,-0.028]\), excludes zero. The per-person difference \(\Delta^*=0.02\times10^{-3}\), CI \([-0.29,\,0.35]\times10^{-3}\), comfortably contains it. The CHP-leaning camp is about 9.5 points larger, but per respondent the two camps are structured identically.</p>
+          <p lang="tr">Ham fark \(S_X-S_Y=-0{,}053\), %95 GA \([-0{,}078,-0{,}028]\), sıfırı dışlar. Kişi başı fark \(\Delta^*=0{,}02\times10^{-3}\), GA \([-0{,}29,\,0{,}35]\times10^{-3}\), sıfırı rahatça içerir. CHP'ye yakın kamp yaklaşık 9,5 puan daha büyüktür, ama katılımcı başına iki kamp aynı biçimde yapılanmıştır.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="size">
+        <div class="stage-main">
+          <div class="ctl">
+            <label for="grow"><span><span lang="en">Size of the Y-leaning camp</span><span lang="tr">Y'ye yakın kampın büyüklüğü</span></span><output id="growOut">×1</output></label>
+            <input type="range" id="grow" min="0" max="8" step="1" value="2">
+          </div>
+          <div id="sizeDots"></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+            <div><div class="fig-title"><span lang="en">Raw scores S (size × intensity)</span><span lang="tr">Ham skorlar S (büyüklük × yoğunluk)</span></div><div id="sizeRaw"></div></div>
+            <div><div class="fig-title"><span lang="en">Per-person scores S* × 10³</span><span lang="tr">Kişi başı skorlar S* × 10³</span></div><div id="sizePer"></div></div>
+          </div>
+          <div class="caption" id="sizeCap"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 8 CONSENSUS =============================== -->
+<section class="chapter" id="ch-consensus">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.4.2 · <span lang="en">Eq. 23–25</span><span lang="tr">Denk. 23–25</span></div>
+      <h2><span lang="en">Shared conviction runs along the other diagonal</span><span lang="tr">Ortak kanaat öbür köşegen boyunca ölçülür</span></h2>
+      <p class="lede" lang="en">The same pipeline with the consensus weights asks a different question: do respondents share a strong view of both items, warm or cold?</p>
+      <p class="lede" lang="tr">Aynı işlem hattı uzlaşı ağırlıklarıyla farklı bir soru sorar: katılımcılar iki madde hakkında ortak ve güçlü bir görüşe, sıcak ya da soğuk, sahip mi?</p>
+    </div>
+    <div class="ch-body wide">
+      <ol class="steps" data-chapter="consensus">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Weights and the anti-diagonal split</span><span lang="tr">Ağırlıklar ve ters köşegen ayrımı</span></button></h3>
+          <p lang="en">\(\mathbf{W}^{\text{con}}\) is negative above the anti-diagonal and positive below it. The 11 toy respondents on the anti-diagonal get weight 0.</p>
+          <p lang="tr">\(\mathbf{W}^{\text{con}}\) ters köşegenin üstünde negatif, altında pozitiftir. Ters köşegendeki 11 oyuncak katılımcı 0 ağırlık alır.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Shared rejection</span><span lang="tr">Ortak ret</span></button><span class="eq">(23)</span></h3>
+          <div class="math">\[\begin{aligned}S_{\text{neg}}&=\sum_{i+j&lt;N}\mathrm{WP}_{ij}\\&=\frac{-48-4-1-8-4-1}{320}\\&=\frac{-66}{320}=-0.20625\end{aligned}\]</div>
+          <p lang="en">The three people at \((0,0)\) dominate: \(-16\times3=-48\).</p>
+          <p lang="tr">\((0,0)\)'daki üç kişi belirleyicidir: \(-16\times3=-48\).</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Shared warmth</span><span lang="tr">Ortak sıcaklık</span></button><span class="eq">(24)</span></h3>
+          <div class="math">\[S_{\text{pos}}=\sum_{i+j&gt;N}\mathrm{WP}_{ij}=\frac{16\times1}{320}=0.05\]</div>
+          <p lang="en">Only one respondent rates both items high, at \((4,4)\).</p>
+          <p lang="tr">İki maddeye de yüksek puan veren tek katılımcı \((4,4)\)'te.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Net consensus</span><span lang="tr">Net uzlaşı</span></button><span class="eq">(25)</span></h3>
+          <div class="math">\[S_{\text{con}}=S_{\text{neg}}+S_{\text{pos}}=-0.15625\]</div>
+          <p lang="en">A negative score means shared rejection outweighs shared warmth. In the paper, \(S_{\text{con}}&lt;0\) for all 78 party pairs.</p>
+          <p lang="tr">Negatif skor, ortak retin ortak sıcaklıktan ağır bastığı anlamına gelir. Makalede 78 parti çiftinin hepsinde \(S_{\text{con}}&lt;0\).</p>
+          <p class="note" lang="en">The paper normalises consensus globally (Eq. 16), like polarization. Package versions up to 0.2.2 normalise each half separately, which gives different consensus values (§3.9). This page follows the paper.</p>
+          <p class="note" lang="tr">Makale uzlaşıyı da kutuplaşma gibi genel olarak normalize eder (Denk. 16). Paketin 0.2.2'ye kadarki sürümleri her yarıyı ayrı normalize eder ve farklı uzlaşı değerleri verir (§3.9). Bu sayfa makaleyi izler.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="consensus">
+        <div class="stage-main">
+          <div class="trio-scroll"><div class="trio" id="cTrio"></div></div>
+          <div class="trio-hint"><span lang="en">Swipe sideways to see all three matrices →</span><span lang="tr">Üç matrisi de görmek için yana kaydırın →</span></div>
+          <div class="sumline" id="cSum"></div>
+          <div id="cBars"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 9 BOOTSTRAP =============================== -->
+<section class="chapter" id="ch-boot">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§2.5 · <span lang="en">Eq. 26–28</span><span lang="tr">Denk. 26–28</span></div>
+      <h2><span lang="en">Resample respondents to measure uncertainty</span><span lang="tr">Belirsizliği ölçmek için katılımcıları yeniden örnekleyin</span></h2>
+      <p class="lede" lang="en">The scores are descriptive. A non-parametric bootstrap adds sampling uncertainty: redraw the sample many times and watch how much the scores move.</p>
+      <p class="lede" lang="tr">Skorlar betimseldir. Parametrik olmayan bootstrap örnekleme belirsizliğini ekler: örneklemi defalarca yeniden çekin ve skorların ne kadar oynadığını izleyin.</p>
+    </div>
+    <div class="ch-body wide">
+      <ol class="steps" data-chapter="boot">
+        <li class="step">
+          <h3><button type="button"><span lang="en">Draw n respondents with replacement</span><span lang="tr">Yerine koyarak n katılımcı çekin</span></button><span class="eq">(26)</span></h3>
+          <div class="math">\[\begin{aligned}\mathcal{D}^{(b)}&=\{(x_{k^*_1},y_{k^*_1}),\dots,(x_{k^*_n},y_{k^*_n})\}\\ k^*_1,\dots,k^*_n&\overset{\text{iid}}{\sim}\text{Uniform}\{1,\dots,n\}\end{aligned}\]</div>
+          <p lang="en">Whole respondents are drawn, so each \((x,y)\) pair stays together and the joint structure survives. Some respondents appear twice, some not at all.</p>
+          <p lang="tr">Katılımcılar bütün olarak çekilir; böylece her \((x,y)\) çifti birlikte kalır ve ortak yapı korunur. Bazı katılımcılar iki kez gelir, bazıları hiç gelmez.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Re-run the whole pipeline</span><span lang="tr">Tüm işlem hattını yeniden çalıştırın</span></button></h3>
+          <p lang="en">Tabulate \(\mathbf{A}^{(b)}\), form \(\mathbf{P}^{(b)}=\mathbf{A}^{(b)}/n\), recompute every score, including the per-person scores (numerator and denominator alike). \(\mathbf{W}\) depends only on \(N\) and the kernel, so it never changes; all the variability comes through \(\mathbf{P}\).</p>
+          <p lang="tr">\(\mathbf{A}^{(b)}\)'yi tablolayın, \(\mathbf{P}^{(b)}=\mathbf{A}^{(b)}/n\)'yi kurun ve kişi başı skorlar dahil her skoru (pay ve paydasıyla birlikte) yeniden hesaplayın. \(\mathbf{W}\) yalnızca \(N\)'ye ve çekirdeğe bağlıdır, hiç değişmez; tüm değişkenlik \(\mathbf{P}\) üzerinden gelir.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Repeat B = 2,000 times</span><span lang="tr">B = 2.000 kez tekrarlayın</span></button></h3>
+          <p lang="en">Now on the full-size simulated AKP × CHP sample (\(n=2218\)). Each replicate adds one value to each histogram. Press Run to watch the distributions form.</p>
+          <p lang="tr">Şimdi tam boyutlu simüle AKP × CHP örnekleminde (\(n=2218\)). Her tekrar her histograma bir değer ekler. Dağılımların oluşmasını izlemek için Çalıştır'a basın.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Standard error</span><span lang="tr">Standart hata</span></button><span class="eq">(27)</span></h3>
+          <div class="math">\[\begin{aligned}\widehat{\mathrm{SE}}&=\sqrt{\frac{1}{B-1}\sum_{b=1}^{B}\bigl(S^{(b)}-\bar S\bigr)^2}\\ \bar S&=\frac{1}{B}\sum_{b=1}^{B}S^{(b)}\end{aligned}\]</div>
+          <p lang="en">The spread of the replicates. The bootstrap bias estimate is \(\bar S-\hat S\).</p>
+          <p lang="tr">Tekrarların yayılımı. Bootstrap yanlılık tahmini \(\bar S-\hat S\)'dir.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Percentile interval</span><span lang="tr">Yüzdelik aralığı</span></button><span class="eq">(28)</span></h3>
+          <div class="math">\[\mathrm{CI}_{1-\alpha}=\bigl[\hat q_{\alpha/2},\ \hat q_{1-\alpha/2}\bigr]\]</div>
+          <p lang="en">Read straight off the sorted replicates, not \(\hat S\pm1.96\,\widehat{\mathrm{SE}}\). Per-person scores are ratios of two noisy quantities, and their distributions can be skewed.</p>
+          <p lang="tr">Doğrudan sıralanmış tekrarlardan okunur, \(\hat S\pm1{,}96\,\widehat{\mathrm{SE}}\) olarak değil. Kişi başı skorlar iki gürültülü niceliğin oranıdır ve dağılımları çarpık olabilir.</p>
+        </li>
+        <li class="step">
+          <h3><button type="button"><span lang="en">Compare camps within replicates</span><span lang="tr">Kampları tekrarların içinde karşılaştırın</span></button></h3>
+          <div class="math">\[\Delta^{*(b)}=S^{*(b)}_X-S^{*(b)}_Y\]</div>
+          <p lang="en">\(S_X\) and \(S_Y\) come from the same table, so they are not independent. Take the difference inside each replicate, then read its percentile interval. Here it straddles zero: the two camps have the same per-person intensity.</p>
+          <p lang="tr">\(S_X\) ve \(S_Y\) aynı tablodan gelir, bağımsız değildir. Farkı her tekrarın içinde alın, sonra yüzdelik aralığını okuyun. Burada aralık sıfırı kapsar: iki kampın kişi başı yoğunluğu aynıdır.</p>
+        </li>
+      </ol>
+      <div class="stage" data-chapter="boot">
+        <div class="stage-main">
+          <div id="bootToy">
+            <div class="ctl-row" style="justify-content:space-between;align-items:center">
+              <div class="fig-title"><span lang="en">Toy sample: one bootstrap replicate</span><span lang="tr">Oyuncak örneklem: tek bir bootstrap tekrarı</span></div>
+              <button type="button" class="btn" id="bootDraw"><span lang="en">Draw a replicate</span><span lang="tr">Bir tekrar çekin</span></button>
+            </div>
+            <div class="tokens" id="bootTokens" style="margin-top:10px"></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:10px;align-items:center">
+              <div id="bootToyMx" style="max-width:300px;width:100%;justify-self:center"></div>
+              <div class="readouts" id="bootToyRO" style="grid-template-columns:1fr 1fr"></div>
+            </div>
+          </div>
+          <div id="bootBig" hidden>
+            <div class="ctl-row" style="justify-content:space-between;align-items:center">
+              <div class="seg" id="bootB" role="group" aria-label="B">
+                <button type="button" data-v="200" aria-pressed="false">B = 200</button>
+                <button type="button" data-v="1000" aria-pressed="false">1,000</button>
+                <button type="button" data-v="2000" aria-pressed="true">2,000</button>
+              </div>
+              <button type="button" class="btn primary" id="bootRun"><svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z"/></svg><span lang="en">Run</span><span lang="tr">Çalıştır</span></button>
+            </div>
+            <div class="fig-title" style="margin-top:12px"><span lang="en">Per-person scores across replicates (× 10³)</span><span lang="tr">Tekrarlar boyunca kişi başı skorlar (× 10³)</span></div>
+            <div id="bootHist"></div>
+            <div class="fig-title" id="bootDeltaTitle"><span lang="en">Within-replicate difference Δ* (× 10³)</span><span lang="tr">Tekrar içi fark Δ* (× 10³)</span></div>
+            <div id="bootDelta"></div>
+            <div class="tbl-wrap"><table class="data" id="bootTable"></table></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 10 RESULTS =============================== -->
+<section class="chapter" id="ch-results">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow">§3 · <span lang="en">Turkey General Social Survey 2024</span><span lang="tr">Türkiye Genel Sosyal Saha Araştırması 2024</span></div>
+      <h2><span lang="en">What it finds in a real party system</span><span lang="tr">Gerçek bir parti sisteminde neler buluyor</span></h2>
+      <p class="lede" lang="en">The paper applies the method to thirteen party-affinity items (“How close or distant do you feel to party P?”, 0 = very distant, 10 = very close), giving 78 party pairs. Tab A uses the simulated AKP × CHP table; tabs B–E draw the paper's published numbers.</p>
+      <p class="lede" lang="tr">Makale yöntemi on üç parti yakınlık maddesine uygular (“P partisine kendinizi ne kadar yakın ya da uzak hissediyorsunuz?”, 0 = çok uzak, 10 = çok yakın); bu 78 parti çifti verir. A sekmesi simüle AKP × CHP tablosunu kullanır; B–E sekmeleri makalede yayımlanan sayıları çizer.</p>
+    </div>
+    <div class="tabs" role="tablist" id="resTabs">
+      <button type="button" role="tab" id="tab-a" aria-controls="res-a" aria-selected="true">A · <span lang="en">Worked pair</span><span lang="tr">Örnek çift</span></button>
+      <button type="button" role="tab" id="tab-b" aria-controls="res-b" aria-selected="false">B · <span lang="en">All 78 pairs</span><span lang="tr">78 çiftin tamamı</span></button>
+      <button type="button" role="tab" id="tab-c" aria-controls="res-c" aria-selected="false">C · <span lang="en">Salience</span><span lang="tr">Belirginlik</span></button>
+      <button type="button" role="tab" id="tab-d" aria-controls="res-d" aria-selected="false">D · <span lang="en">Kernel choice</span><span lang="tr">Çekirdek seçimi</span></button>
+      <button type="button" role="tab" id="tab-e" aria-controls="res-e" aria-selected="false">E · <span lang="en">Party map</span><span lang="tr">Parti haritası</span></button>
+    </div>
+
+    <div class="panel" role="tabpanel" id="res-a" aria-labelledby="tab-a">
+      <div class="fig">
+        <div class="ctl-row" style="justify-content:space-between">
+          <div class="fig-title"><span lang="en">Simulated AKP × CHP table, n = 2,218</span><span lang="tr">Simüle AKP × CHP tablosu, n = 2.218</span></div>
+          <div class="seg" id="aMode" role="group" aria-label="Show">
+            <button type="button" data-v="A" aria-pressed="false"><span lang="en">Counts A</span><span lang="tr">Sayımlar A</span></button>
+            <button type="button" data-v="WP" aria-pressed="true"><span lang="en">Contributions WP</span><span lang="tr">Katkılar WP</span></button>
+          </div>
+        </div>
+        <div id="aMx" style="max-width:520px;width:100%;justify-self:center"></div>
+        <div class="caption" lang="en">Rows: AKP affinity <i>i</i>; columns: CHP affinity <i>j</i>. Simulated table; see the note at the bottom of the page.</div>
+        <div class="caption" lang="tr">Satırlar: AKP yakınlığı <i>i</i>; sütunlar: CHP yakınlığı <i>j</i>. Simüle tablo; sayfanın altındaki nota bakın.</div>
+      </div>
+      <div class="txt">
+        <h3><span lang="en">Two corners carry the score</span><span lang="tr">Skoru iki köşe taşıyor</span></h3>
+        <p lang="en">Cell \((0,10)\), maximally distant from AKP and maximally close to CHP, holds 311 respondents and contributes 0.140. Its mirror \((10,0)\) holds 259 and contributes 0.117. Together they make up 57% of \(S_{\text{pol}}\) while holding only 26% of the respondents. This is the weighting working as designed: extreme, midpoint-straddling disagreement is what \(\mathbf{W}\) is built to detect.</p>
+        <p lang="tr">AKP'ye en uzak ve CHP'ye en yakın \((0,10)\) hücresinde 311 katılımcı vardır ve 0,140 katkı yapar. Ayna hücresi \((10,0)\)'da 259 kişi vardır ve 0,117 katkı yapar. İkisi birlikte katılımcıların yalnızca %26'sını tutarken \(S_{\text{pol}}\)'un %57'sini oluşturur. Ağırlıklandırma tasarlandığı gibi çalışıyor: \(\mathbf{W}\) tam da orta noktanın iki yanına yayılan uç anlaşmazlığı yakalamak için kurulmuştur.</p>
+        <div class="readouts" id="aRO"></div>
+      </div>
+    </div>
+
+    <div class="panel" role="tabpanel" id="res-b" aria-labelledby="tab-b" hidden>
+      <div class="fig">
+        <div class="fig-title"><span lang="en">Below the diagonal: S<sub>pol</sub>. Above: S<sub>con</sub>. (Table 3)</span><span lang="tr">Köşegenin altı: S<sub>pol</sub>. Üstü: S<sub>con</sub>. (Tablo 3)</span></div>
+        <div id="bMx" style="max-width:600px;width:100%;justify-self:center"></div>
+        <div class="legend">
+          <span><i class="sw pos"></i><span lang="en">S<sub>pol</sub>, darker = more polarized</span><span lang="tr">S<sub>pol</sub>, koyu = daha kutuplaşmış</span></span>
+          <span><i class="sw neg"></i><span lang="en">S<sub>con</sub>, darker = stronger shared rejection</span><span lang="tr">S<sub>con</sub>, koyu = daha güçlü ortak ret</span></span>
+        </div>
+      </div>
+      <div class="txt">
+        <h3><span lang="en">Structured, not diffuse</span><span lang="tr">Dağınık değil, yapılı</span></h3>
+        <p lang="en">\(S_{\text{pol}}\) spans a factor of fifteen, from 0.029 for DEVA × GP to 0.453 for AKP × CHP. Every one of the ten most polarized pairs involves the AKP, the CHP or the MHP. Pairs of two small parties are squeezed into the bottom of the range.</p>
+        <p lang="tr">\(S_{\text{pol}}\) on beş kat bir aralığa yayılır: DEVA × GP için 0,029'dan AKP × CHP için 0,453'e. En kutuplaşmış on çiftin her biri AKP, CHP ya da MHP'yi içerir. İki küçük partiden oluşan çiftler aralığın dibine sıkışır.</p>
+        <p lang="en">\(S_{\text{con}}&lt;0\) for all 78 pairs: no pair of parties attracts net shared warmth. The dominant shared attitude is rejection of the party system in general.</p>
+        <p lang="tr">78 çiftin hepsinde \(S_{\text{con}}&lt;0\): hiçbir parti çifti net ortak sıcaklık görmüyor. Baskın ortak tutum, parti sisteminin genel olarak reddedilmesi.</p>
+        <div class="tbl-wrap"><table class="data" id="bTop"></table></div>
+      </div>
+    </div>
+
+    <div class="panel" role="tabpanel" id="res-c" aria-labelledby="tab-c" hidden>
+      <div class="fig">
+        <div class="fig-title"><span lang="en">Mean affinity vs. mean S<sub>pol</sub> against the other 12 parties (Table 2)</span><span lang="tr">Ortalama yakınlık ve diğer 12 partiye karşı ortalama S<sub>pol</sub> (Tablo 2)</span></div>
+        <div id="cScatter"></div>
+      </div>
+      <div class="txt">
+        <h3><span lang="en">Polarization tracks salience</span><span lang="tr">Kutuplaşma belirginliği izliyor</span></h3>
+        <p lang="en">Across the thirteen parties, the party-level average of \(S_{\text{pol}}\) is almost a linear function of how warmly the party is rated on average (<span id="cR">r = 0.97</span>). A party that four fifths of respondents put at 0 sends nearly all its mass to cells near \((0,0)\), where distance and agreement terms are both small.</p>
+        <p lang="tr">On üç parti genelinde, \(S_{\text{pol}}\)'un parti düzeyindeki ortalaması partinin ortalama ne kadar sıcak değerlendirildiğinin neredeyse doğrusal bir fonksiyonudur (<span id="cR2">r = 0,97</span>). Katılımcıların beşte dördünün 0 verdiği bir parti, kütlesinin neredeyse tamamını uzaklık ve uyum terimlerinin ikisinin de küçük olduğu \((0,0)\) çevresine gönderir.</p>
+        <p lang="en">The residuals are the informative part. DEM sits furthest above the line (+0.031): rated 0 by 79.6% of respondents, yet strongly embraced by a small constituency. İYİ and YRP sit furthest below it. Rank parties by the residual or by \(\overline{S}^*\), not by raw averages.</p>
+        <p lang="tr">Asıl bilgi artıklarda. DEM çizginin en üstünde (+0,031): katılımcıların %79,6'sı 0 veriyor, ama küçük bir seçmen kitlesi onu güçlü biçimde benimsiyor. İYİ ve YRP çizginin en altında. Partileri ham ortalamalara göre değil, artığa ya da \(\overline{S}^*\)'a göre sıralayın.</p>
+      </div>
+    </div>
+
+    <div class="panel" role="tabpanel" id="res-d" aria-labelledby="tab-d" hidden>
+      <div class="fig">
+        <div class="fig-title"><span lang="en">AKP × CHP S<sub>pol</sub> with 95% CI under eight specifications (Table 6)</span><span lang="tr">Sekiz tanım altında AKP × CHP S<sub>pol</sub> ve %95 GA (Tablo 6)</span></div>
+        <div id="dChart"></div>
+        <div class="legend">
+          <span><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--ink-2)" stroke-width="2"/><circle cx="11" cy="5" r="4" fill="var(--ink)"/></svg><span lang="en">published estimate and CI</span><span lang="tr">yayımlanan tahmin ve GA</span></span>
+          <span><svg width="12" height="12" aria-hidden="true"><path d="M6 1 11 6 6 11 1 6z" fill="var(--sheet)" stroke="var(--pen)" stroke-width="2"/></svg><span lang="en">this page, simulated table</span><span lang="tr">bu sayfa, simüle tablo</span></span>
+        </div>
+      </div>
+      <div class="txt">
+        <h3><span lang="en">Levels move, the ranking does not</span><span lang="tr">Düzeyler oynar, sıralama oynamaz</span></h3>
+        <p lang="en">The leading pair ranges from 0.386 with a convex distance curve (\(p=2\)) to 0.534 with the agreement term switched off (\(q=0\)). Yet the Spearman correlation between the 78 pairs' scores under any alternative and under the default never falls below 0.9949.</p>
+        <p lang="tr">Önde gelen çift, dış bükey uzaklık eğrisiyle (\(p=2\)) 0,386'dan uyum terimi kapatıldığında (\(q=0\)) 0,534'e kadar değişir. Yine de 78 çiftin herhangi bir alternatif altındaki skorlarıyla varsayılan altındaki skorları arasındaki Spearman korelasyonu hiçbir zaman 0,9949'un altına düşmez.</p>
+        <p lang="en">Report absolute levels together with the kernel that produced them. Comparative claims, which pair divides more than which, survive every specification examined.</p>
+        <p lang="tr">Mutlak düzeyleri onları üreten çekirdekle birlikte raporlayın. Karşılaştırmalı iddialar, hangi çiftin hangisinden daha bölücü olduğu, incelenen her tanımda geçerliliğini korur.</p>
+        <div class="tbl-wrap"><table class="data" id="dTable"></table></div>
+      </div>
+    </div>
+
+    <div class="panel" role="tabpanel" id="res-e" aria-labelledby="tab-e" hidden>
+      <div class="fig">
+        <div class="fig-title"><span lang="en">Classical MDS of the 78 S<sub>pol</sub> scores, computed in your browser from Table 3</span><span lang="tr">78 S<sub>pol</sub> skorunun klasik ÇBÖ'sü, Tablo 3'ten tarayıcınızda hesaplandı</span></div>
+        <div id="eMap"></div>
+        <div class="caption" id="eCap"></div>
+      </div>
+      <div class="txt">
+        <h3><span lang="en">The cleavage falls out of the numbers</span><span lang="tr">Ayrışma sayılardan kendiliğinden çıkıyor</span></h3>
+        <p lang="en">Because the 78 scores form a symmetric matrix with a zero diagonal, they can be read as dissimilarities and embedded in two dimensions. The first coordinate orders the parties along the government–opposition axis, AKP and MHP on one side and CHP on the other, although no such information was given to the procedure.</p>
+        <p lang="tr">78 skor, köşegeni sıfır olan simetrik bir matris oluşturduğu için farklılık ölçüsü olarak okunup iki boyuta yerleştirilebilir. Prosedüre böyle bir bilgi verilmediği halde, ilk koordinat partileri iktidar–muhalefet ekseninde sıralar: bir yanda AKP ve MHP, öbür yanda CHP.</p>
+        <p lang="en">Steps: square the dissimilarities, double-centre them, \(\mathbf{B}=-\tfrac12\mathbf{J}\mathbf{D}^{(2)}\mathbf{J}\), and take the top two eigenvectors scaled by \(\sqrt{\lambda}\). Lines join pairs with \(S_{\text{pol}}&gt;0.29\); marker area follows mean affinity.</p>
+        <p lang="tr">Adımlar: farklılıkların karesini alın, çift merkezleyin, \(\mathbf{B}=-\tfrac12\mathbf{J}\mathbf{D}^{(2)}\mathbf{J}\), ve \(\sqrt{\lambda}\) ile ölçeklenmiş ilk iki özvektörü alın. Çizgiler \(S_{\text{pol}}&gt;0{,}29\) olan çiftleri birleştirir; işaret alanı ortalama yakınlığı izler.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== 11 RECIPE =============================== -->
+<section class="chapter" id="ch-recipe">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="eyebrow"><span lang="en">Summary</span><span lang="tr">Özet</span></div>
+      <h2><span lang="en">The whole method on one card</span><span lang="tr">Tüm yöntem tek kartta</span></h2>
+    </div>
+    <div class="recipe-wrap">
+    <ol class="recipe">
+      <li><h3><span lang="en">Tabulate</span><span lang="tr">Tablolayın</span></h3><p lang="en">Drop incomplete pairs, count \(a_{ij}\) into the \((N+1)\times(N+1)\) matrix \(\mathbf{A}\).</p><p lang="tr">Eksik çiftleri atın, \(a_{ij}\)'leri \((N+1)\times(N+1)\) boyutlu \(\mathbf{A}\) matrisine sayın.</p></li>
+      <li><h3><span lang="en">Build W</span><span lang="tr">W'yi kurun</span></h3><p lang="en">\(d\) and \(a\) from Eq. 8–9 (or 10–11), kernel \(m=d^p a^q\), then \(w=m/\max|m|\).</p><p lang="tr">Denk. 8–9'dan (ya da 10–11'den) \(d\) ve \(a\), çekirdek \(m=d^p a^q\), sonra \(w=m/\max|m|\).</p></li>
+      <li><h3><span lang="en">Normalise globally</span><span lang="tr">Genel normalize edin</span></h3><p lang="en">\(\mathbf{P}=\mathbf{A}/n\), one denominator for the whole table.</p><p lang="tr">\(\mathbf{P}=\mathbf{A}/n\), tüm tablo için tek payda.</p></li>
+      <li><h3><span lang="en">Weight</span><span lang="tr">Ağırlıklandırın</span></h3><p lang="en">\(\mathbf{WP}=\mathbf{W}\circ\mathbf{P}\), cell by cell.</p><p lang="tr">\(\mathbf{WP}=\mathbf{W}\circ\mathbf{P}\), hücre hücre.</p></li>
+      <li><h3><span lang="en">Sum the regions</span><span lang="tr">Bölgeleri toplayın</span></h3><p lang="en">\(S_X\), \(S_Y\), \(S_{\text{pol}}\) over the triangles; \(S_{\text{neg}}\), \(S_{\text{pos}}\), \(S_{\text{con}}\) over the anti-diagonal halves.</p><p lang="tr">Üçgenler üzerinden \(S_X\), \(S_Y\), \(S_{\text{pol}}\); ters köşegen yarıları üzerinden \(S_{\text{neg}}\), \(S_{\text{pos}}\), \(S_{\text{con}}\).</p></li>
+      <li><h3><span lang="en">Divide by size</span><span lang="tr">Büyüklüğe bölün</span></h3><p lang="en">\(S^*_X=S_X/\pi_X\), \(S^*_Y=S_Y/\pi_Y\): intensity per respondent.</p><p lang="tr">\(S^*_X=S_X/\pi_X\), \(S^*_Y=S_Y/\pi_Y\): katılımcı başına yoğunluk.</p></li>
+      <li><h3><span lang="en">Bootstrap respondents</span><span lang="tr">Katılımcıları bootstrap'leyin</span></h3><p lang="en">\(B=2000\) resamples of whole rows; SE from the SD, CI from percentiles, differences within replicates.</p><p lang="tr">Satırların bütün olarak \(B=2000\) kez yeniden örneklenmesi; SH standart sapmadan, GA yüzdeliklerden, farklar tekrarların içinde.</p></li>
+    </ol>
+    <div class="recipe-code">
+      <div class="fig-title"><span lang="en">The same pipeline in the Python package</span><span lang="tr">Aynı işlem hattı Python paketinde</span></div>
+<pre class="code tex2jax_ignore"><span class="c"># pip install bipolarization</span>
+from polarization import calculate_scores, dashboard_pair
+
+r = calculate_scores(df, <span class="s">"akp"</span>, <span class="s">"chp"</span>,
+                     score_type=<span class="s">"polarization"</span>, kernel=<span class="s">"power"</span>,
+                     p=1.0, q=1.0, B=2000, random_state=42)
+r[<span class="s">"point"</span>][<span class="s">"overall"</span>]            <span class="c"># S_pol</span>
+r[<span class="s">"point"</span>][<span class="s">"akp_per_person"</span>]     <span class="c"># S*_X</span>
+r[<span class="s">"bootstrap"</span>][<span class="s">"overall"</span>][<span class="s">"ci"</span>]  <span class="c"># 95% percentile CI</span>
+
+dashboard_pair(df, <span class="s">"akp"</span>, <span class="s">"chp"</span>, score_type=<span class="s">"polarization"</span>)</pre>
+    </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p lang="en"><b>About the data.</b> The toy survey (20 respondents, 0–4 scale) is invented for illustration. The AKP × CHP table is <b>simulated</b>: it was reconstructed so that every per-cell contribution matches Figure 2(c) of the paper to three decimals and its group shares, scores and margins match the published values. It is not the TGSS microdata. Bootstrap results on this page come from that simulated table and a seeded generator. Tabs B–E of the results show values published in Tables 2, 3, 4 and 6.</p>
+    <p lang="tr"><b>Veri hakkında.</b> Oyuncak anket (20 katılımcı, 0–4 ölçeği) açıklama amacıyla uydurulmuştur. AKP × CHP tablosu <b>simüledir</b>: her hücre katkısı makalenin Şekil 2(c)'siyle üç ondalık basamağa kadar, grup payları, skorları ve marjinalleri de yayımlanan değerlerle örtüşecek biçimde yeniden kurulmuştur. TGSS mikro verisi değildir. Bu sayfadaki bootstrap sonuçları o simüle tablodan ve tohumlanmış bir üreteçten gelir. Bulgular bölümünün B–E sekmeleri Tablo 2, 3, 4 ve 6'da yayımlanan değerleri gösterir.</p>
+    <p lang="en">Method and software: <code>bipolarization</code> Python package v0.2.2 and its R port <code>bipolarizationR</code>, Nişancı, Yüce &amp; Kavdır. Equation numbers follow the paper.</p>
+    <p lang="tr">Yöntem ve yazılım: <code>bipolarization</code> Python paketi v0.2.2 ve R sürümü <code>bipolarizationR</code>, Nişancı, Yüce ve Kavdır. Denklem numaraları makaleyi izler.</p>
+  </div>
+</footer>
+</div>
+<div id="tip" role="status" aria-live="polite"></div>
