@@ -125,6 +125,21 @@ def test_every_replicate_counts_the_complete_pairs(monkeypatch):
     assert table_totals == [n] * 51
 
 
+@pytest.mark.parametrize(
+    "make_frame", [_toy_frame, _toy_frame_missing_y], ids=["complete", "nan-in-one-column"],
+)
+def test_duplicate_index_labels_score_like_a_fresh_index(make_frame):
+    df = make_frame()
+    kwargs = dict(start_value=0, end_value=4, B=50, keep_dists=True)
+    expected = calculate_scores(df.reset_index(drop=True), "X", "Y", **kwargs)
+    # Each label used five times, as after pd.concat without ignore_index.
+    result = calculate_scores(df.set_axis(np.arange(len(df)) % 4), "X", "Y", **kwargs)
+
+    for key, summary in result["bootstrap"].items():
+        assert result["point"][key] == expected["point"][key]
+        np.testing.assert_array_equal(summary["dist"], expected["bootstrap"][key]["dist"])
+
+
 def test_zero_replications_skip_the_bootstrap():
     with warnings.catch_warnings():
         warnings.simplefilter("error")

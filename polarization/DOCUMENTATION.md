@@ -176,7 +176,7 @@ The main entry point. Computes point estimates and bootstrap CIs for the variabl
 | `q` | `1.0` | Agreement exponent |
 | `score_type` | `"polarization"` | `"polarization"` or `"consensus"` |
 | `kernel` | `"power"` | `"power"` or `"gaussian"` |
-| `dropna` | `False` | NaN handling flag (both columns are always inner-aligned) |
+| `dropna` | `False` | NaN handling flag (currently informational; respondents missing either variable are always dropped) |
 | `B` | `2000` | Number of bootstrap replications; `0` skips the bootstrap (summaries are NaN) |
 | `ci` | `0.95` | Confidence level (e.g. `0.95` → 95% CI) |
 | `random_state` | `42` | Integer seed for reproducibility; pass `None` for random |
