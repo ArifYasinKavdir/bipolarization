@@ -40,7 +40,7 @@ def weight_matrix_generator(
     kernel : {'power', 'gaussian'}
         How *d* is mapped to a weight.
 
-        * ``'power'``    : ``M = (d**p) * (a**q)``
+        * ``'power'``    : ``M = abs(d)**p * (a**q)``, negated where ``d < 0``
         * ``'gaussian'`` : ``M = (1 - exp(-d² / 2p²)) * sign(d) * (a**q)``
 
     Returns
@@ -69,7 +69,10 @@ def weight_matrix_generator(
         raise ValueError("type must be 'polarization' or 'consensus'")
 
     if kernel == "power":
-        M = (d ** p) * (a ** q)
+        # Raise |d| to p and keep d's sign: consensus d is negative below the
+        # anti-diagonal, where d ** p is NaN for fractional p and positive
+        # for even p.
+        M = np.where(d < 0, -1.0, 1.0) * np.abs(d) ** p * (a ** q)
     elif kernel == "gaussian":
         g = 1 - np.exp(-(d ** 2) / (2 * p ** 2))
         g = g * np.sign(d)

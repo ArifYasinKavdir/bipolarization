@@ -83,7 +83,7 @@ Two kernels control how `d` maps to a weight:
 
 | Kernel | Formula | Effect |
 |---|---|---|
-| `'power'` | `M = (d**p) * (a**q)` | Smooth, monotone. `p < 1` emphasises moderate distances; `p > 1` emphasises extremes. |
+| `'power'` | `M = abs(d)**p * (a**q)`, negated where `d < 0` | Smooth, monotone. `p < 1` emphasises moderate distances; `p > 1` emphasises extremes. |
 | `'gaussian'` | `M = (1 - exp(-d² / 2p²)) * sign(d) * (a**q)` | S-shaped. `p` is the bandwidth sigma; small `p` makes the weight rise steeply near the diagonal. |
 
 The parameter `q` always controls the sharpness of the agreement term — higher `q` suppresses pairs that are not sufficiently close to the relevant axis/anti-diagonal.

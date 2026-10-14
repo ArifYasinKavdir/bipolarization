@@ -140,6 +140,16 @@ def test_duplicate_index_labels_score_like_a_fresh_index(make_frame):
         np.testing.assert_array_equal(summary["dist"], expected["bootstrap"][key]["dist"])
 
 
+def test_consensus_scores_are_finite_for_fractional_p():
+    point = calculate_scores(
+        _toy_frame(), "X", "Y",
+        start_value=0, end_value=4, p=0.5, score_type="consensus", B=0,
+    )["point"]
+
+    assert point["negatives"] < 0 < point["positives"]
+    assert np.isfinite(point["overall"])
+
+
 def test_zero_replications_skip_the_bootstrap():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
