@@ -70,6 +70,29 @@ def _single_run_score(
         pd.crosstab(col_x, col_y)
         .reindex(index=full_scale, columns=full_scale, fill_value=0)
     )
+    return _score_counts(
+        count_matrix.to_numpy(), x, y, start_value, end_value,
+        p, q, score_type, kernel, formula,
+    )
+
+
+def _score_counts(
+    A: np.ndarray,
+    x: str,
+    y: str,
+    start_value: int,
+    end_value: int,
+    p: float,
+    q: float,
+    score_type: str,
+    kernel: str = "power",
+    formula: str = "global",
+) -> dict:
+    """
+    Score the joint count table *A* (rows = *x*, columns = *y*, both spanning
+    the full scale).  Returns the dict described in :func:`_single_run_score`.
+    """
+    full_scale = range(start_value, end_value + 1)
 
     W = np.asarray(
         weight_matrix_generator(
@@ -78,7 +101,6 @@ def _single_run_score(
         ),
         dtype=float,
     )
-    A = count_matrix.to_numpy()
 
     if W.shape != A.shape:
         raise ValueError(f"weights shape {W.shape} must match table shape {A.shape}")
@@ -152,6 +174,34 @@ def _single_run_score(
         raise ValueError("score_type must be 'polarization' or 'consensus'")
 
 
+def _complete_pair_cells(
+    df: pd.DataFrame,
+    x: str,
+    y: str,
+    start_value: int,
+    end_value: int,
+) -> np.ndarray:
+    """
+    Flat table cell of each respondent the point estimate counts, in row order.
+
+    Cell ``(i, j)`` of the ``side × side`` table is encoded as
+    ``(i - start_value) * side + (j - start_value)``.  The rules match the
+    crosstab in :func:`_single_run_score`: rows missing either variable are
+    dropped (listwise deletion), values are truncated with ``astype(int)``,
+    and pairs off the scale are dropped.  Rows are selected by position,
+    never by index label.
+    """
+    present = df[x].notna().to_numpy() & df[y].notna().to_numpy()
+    xi = df[x].iloc[present].astype(int).to_numpy()
+    yi = df[y].iloc[present].astype(int).to_numpy()
+    on_scale = (
+        (xi >= start_value) & (xi <= end_value)
+        & (yi >= start_value) & (yi <= end_value)
+    )
+    side = end_value - start_value + 1
+    return (xi[on_scale] - start_value) * side + (yi[on_scale] - start_value)
+
+
 def _bootstrap(
     df: pd.DataFrame,
     x: str,
@@ -181,13 +231,21 @@ def _bootstrap(
     point = _single_run_score(df, x, y, start_value, end_value, p, q, score_type, dropna, kernel, formula)
     public_keys = [k for k in point if k != "type" and not k.startswith("_")]
 
-    n = len(df)
-    idx = np.arange(n)
+    # Listwise deletion happens once, before resampling: every replicate
+    # redraws the n respondents the point estimate counts, so each replicate
+    # table holds exactly n respondents.  A respondent's cell carries both
+    # answers, so resampling cells resamples whole rows.  Replicates are
+    # tabulated by position: a resample repeats index labels, and label
+    # alignment either raises on repeats or multiplies repeated respondents.
+    cells = _complete_pair_cells(df, x, y, start_value, end_value)
+    n = len(cells)
+    side = end_value - start_value + 1
     dist = {k: np.empty(B, dtype=float) for k in public_keys}
 
     for b in range(B):
-        sample_idx = rng.choice(idx, size=n, replace=True)
-        s = _single_run_score(df.iloc[sample_idx], x, y, start_value, end_value, p, q, score_type, dropna, kernel, formula)
+        sample = rng.choice(cells, size=n, replace=True)
+        A = np.bincount(sample, minlength=side * side).reshape(side, side)
+        s = _score_counts(A, x, y, start_value, end_value, p, q, score_type, kernel, formula)
         for k in public_keys:
             dist[k][b] = s[k]
 
@@ -236,6 +294,11 @@ def calculate_scores(
     summarises the result as a scalar score per triangle (or per half of the
     anti-diagonal).  Bootstrap resampling provides standard errors and
     confidence intervals.
+
+    Respondents missing either variable, or answering outside
+    [*start_value*, *end_value*], are dropped once (listwise deletion).  Each
+    bootstrap replication resamples the remaining *n* respondents, whole rows
+    with replacement, so every replicate table counts exactly *n* respondents.
 
     Parameters
     ----------

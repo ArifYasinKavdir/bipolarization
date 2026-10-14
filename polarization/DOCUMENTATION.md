@@ -122,10 +122,11 @@ High consensus score → respondents tend to rate both variables similarly (eith
 
 All public scores are accompanied by bootstrap confidence intervals. The procedure:
 
-1. Compute the point estimate on the full dataset.
-2. Draw `B` bootstrap samples (resampling rows with replacement).
-3. Compute the score on each sample.
-4. Report `mean`, `se` (standard deviation of bootstrap distribution), and the `ci`-level percentile interval.
+1. Drop respondents missing either variable (listwise deletion), along with answers outside `[start_value, end_value]`. `n` respondents remain.
+2. Compute the point estimate on those `n` respondents.
+3. Draw `B` bootstrap samples, each resampling the `n` respondents (whole rows) with replacement, so every sample's table counts exactly `n` respondents.
+4. Compute the score on each sample.
+5. Report `mean`, `se` (standard deviation of bootstrap distribution), and the `ci`-level percentile interval.
 
 This is a non-parametric approach — no distributional assumptions are made about the responses.
 
