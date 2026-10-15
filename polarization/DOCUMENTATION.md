@@ -83,7 +83,7 @@ Two kernels control how `d` maps to a weight:
 
 | Kernel | Formula | Effect |
 |---|---|---|
-| `'power'` | `M = (d**p) * (a**q)` | Smooth, monotone. `p < 1` emphasises moderate distances; `p > 1` emphasises extremes. |
+| `'power'` | `M = abs(d)**p * (a**q)`, negated where `d < 0` | Smooth, monotone. `p < 1` emphasises moderate distances; `p > 1` emphasises extremes. |
 | `'gaussian'` | `M = (1 - exp(-d² / 2p²)) * sign(d) * (a**q)` | S-shaped. `p` is the bandwidth sigma; small `p` makes the weight rise steeply near the diagonal. |
 
 The parameter `q` always controls the sharpness of the agreement term — higher `q` suppresses pairs that are not sufficiently close to the relevant axis/anti-diagonal.
@@ -122,10 +122,11 @@ High consensus score → respondents tend to rate both variables similarly (eith
 
 All public scores are accompanied by bootstrap confidence intervals. The procedure:
 
-1. Compute the point estimate on the full dataset.
-2. Draw `B` bootstrap samples (resampling rows with replacement).
-3. Compute the score on each sample.
-4. Report `mean`, `se` (standard deviation of bootstrap distribution), and the `ci`-level percentile interval.
+1. Drop respondents missing either variable (listwise deletion), along with answers outside `[start_value, end_value]`. `n` respondents remain.
+2. Compute the point estimate on those `n` respondents.
+3. Draw `B` bootstrap samples, each resampling the `n` respondents (whole rows) with replacement, so every sample's table counts exactly `n` respondents.
+4. Compute the score on each sample.
+5. Report `mean`, `se` (standard deviation of bootstrap distribution), and the `ci`-level percentile interval.
 
 This is a non-parametric approach — no distributional assumptions are made about the responses.
 
@@ -175,8 +176,8 @@ The main entry point. Computes point estimates and bootstrap CIs for the variabl
 | `q` | `1.0` | Agreement exponent |
 | `score_type` | `"polarization"` | `"polarization"` or `"consensus"` |
 | `kernel` | `"power"` | `"power"` or `"gaussian"` |
-| `dropna` | `False` | NaN handling flag (both columns are always inner-aligned) |
-| `B` | `2000` | Number of bootstrap replications |
+| `dropna` | `False` | NaN handling flag (currently informational; respondents missing either variable are always dropped) |
+| `B` | `2000` | Number of bootstrap replications; `0` skips the bootstrap (summaries are NaN) |
 | `ci` | `0.95` | Confidence level (e.g. `0.95` → 95% CI) |
 | `random_state` | `42` | Integer seed for reproducibility; pass `None` for random |
 | `keep_dists` | `False` | If `True`, include raw bootstrap arrays in the result |

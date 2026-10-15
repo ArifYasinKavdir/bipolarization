@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bipolarization"
-version = "0.2.2"
+version = "0.3.0"
 description = "Detect and quantify polarization and consensus in survey data using weighted kernel scoring and bootstrap inference."
 readme = "polarization/DOCUMENTATION.md"
 requires-python = ">=3.10"
@@ -31,3 +31,7 @@ dev = ["pytest", "build", "twine"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["polarization"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

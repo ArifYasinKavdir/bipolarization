@@ -30,6 +30,41 @@ def _normalize_globally(A: np.ndarray) -> np.ndarray:
     return A / total if total > 0 else np.zeros_like(A, dtype=float)
 
 
+def _complete_pair_cells(
+    df: pd.DataFrame,
+    x: str,
+    y: str,
+    start_value: int,
+    end_value: int,
+) -> np.ndarray:
+    """
+    Flat table cell of each respondent with a complete on-scale pair, in row order.
+
+    Cell ``(i, j)`` of the ``side × side`` table is encoded as
+    ``(i - start_value) * side + (j - start_value)``.  Rows missing either
+    variable are dropped (listwise deletion), values are truncated with
+    ``astype(int)``, and pairs off the scale are dropped.  Rows are selected
+    by position, never by index label: labels repeat in a bootstrap resample
+    or a frame built with ``pd.concat``, and aligning on repeated labels
+    either raises or multiplies the repeated respondents.
+    """
+    present = df[x].notna().to_numpy() & df[y].notna().to_numpy()
+    xi = df[x].iloc[present].astype(int).to_numpy()
+    yi = df[y].iloc[present].astype(int).to_numpy()
+    on_scale = (
+        (xi >= start_value) & (xi <= end_value)
+        & (yi >= start_value) & (yi <= end_value)
+    )
+    side = end_value - start_value + 1
+    return (xi[on_scale] - start_value) * side + (yi[on_scale] - start_value)
+
+
+def _count_table(cells: np.ndarray, start_value: int, end_value: int) -> np.ndarray:
+    """Joint count table (rows = *x*, columns = *y*) of the flat *cells*."""
+    side = end_value - start_value + 1
+    return np.bincount(cells, minlength=side * side).reshape(side, side)
+
+
 def _single_run_score(
     df: pd.DataFrame,
     x: str,
@@ -60,16 +95,30 @@ def _single_run_score(
 
     Keys prefixed with ``_`` are diagnostic / internal.
     """
-    full_scale = range(start_value, end_value + 1)
-
-    col_x = df[x].dropna().astype(int)
-    col_y = df[y].dropna().astype(int)
-    col_x, col_y = col_x.align(col_y, join="inner")
-
-    count_matrix = (
-        pd.crosstab(col_x, col_y)
-        .reindex(index=full_scale, columns=full_scale, fill_value=0)
+    cells = _complete_pair_cells(df, x, y, start_value, end_value)
+    return _score_counts(
+        _count_table(cells, start_value, end_value), x, y, start_value, end_value,
+        p, q, score_type, kernel, formula,
     )
+
+
+def _score_counts(
+    A: np.ndarray,
+    x: str,
+    y: str,
+    start_value: int,
+    end_value: int,
+    p: float,
+    q: float,
+    score_type: str,
+    kernel: str = "power",
+    formula: str = "global",
+) -> dict:
+    """
+    Score the joint count table *A* (rows = *x*, columns = *y*, both spanning
+    the full scale).  Returns the dict described in :func:`_single_run_score`.
+    """
+    full_scale = range(start_value, end_value + 1)
 
     W = np.asarray(
         weight_matrix_generator(
@@ -78,7 +127,6 @@ def _single_run_score(
         ),
         dtype=float,
     )
-    A = count_matrix.to_numpy()
 
     if W.shape != A.shape:
         raise ValueError(f"weights shape {W.shape} must match table shape {A.shape}")
@@ -180,14 +228,26 @@ def _bootstrap(
     """
     point = _single_run_score(df, x, y, start_value, end_value, p, q, score_type, dropna, kernel, formula)
     public_keys = [k for k in point if k != "type" and not k.startswith("_")]
+    if B == 0:  # point estimates only; the bootstrap summaries are undefined
+        return point, {
+            k: {"mean": np.nan, "se": np.nan, "ci": [np.nan, np.nan], "dist": np.empty(0)}
+            for k in public_keys
+        }
 
-    n = len(df)
-    idx = np.arange(n)
+    # Listwise deletion happens once, before resampling: every replicate
+    # redraws the n respondents the point estimate counts, so each replicate
+    # table holds exactly n respondents.  A respondent's cell carries both
+    # answers, so resampling cells resamples whole rows.
+    cells = _complete_pair_cells(df, x, y, start_value, end_value)
+    n = len(cells)
     dist = {k: np.empty(B, dtype=float) for k in public_keys}
 
     for b in range(B):
-        sample_idx = rng.choice(idx, size=n, replace=True)
-        s = _single_run_score(df.iloc[sample_idx], x, y, start_value, end_value, p, q, score_type, dropna, kernel, formula)
+        sample = rng.choice(cells, size=n, replace=True)
+        s = _score_counts(
+            _count_table(sample, start_value, end_value), x, y, start_value, end_value,
+            p, q, score_type, kernel, formula,
+        )
         for k in public_keys:
             dist[k][b] = s[k]
 
@@ -237,6 +297,11 @@ def calculate_scores(
     anti-diagonal).  Bootstrap resampling provides standard errors and
     confidence intervals.
 
+    Respondents missing either variable, or answering outside
+    [*start_value*, *end_value*], are dropped once (listwise deletion).  Each
+    bootstrap replication resamples the remaining *n* respondents, whole rows
+    with replacement, so every replicate table counts exactly *n* respondents.
+
     Parameters
     ----------
     df : pd.DataFrame
@@ -272,9 +337,10 @@ def calculate_scores(
         each normalised independently to sum to 1.
     dropna : bool, default False
         Whether to drop NaN values before scoring (currently informational;
-        both columns are always dropna'd via alignment).
+        respondents missing either variable are always dropped).
     B : int, default 2000
-        Number of bootstrap replications.
+        Number of bootstrap replications.  ``0`` skips the bootstrap: point
+        estimates are returned and every bootstrap summary is NaN.
     ci : float, default 0.95
         Confidence level for the bootstrap interval.
     random_state : int or None, default 42
